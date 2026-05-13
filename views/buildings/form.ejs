@@ -1,0 +1,13 @@
+<%- include("../partials/header", { title: `${title} | VecinosApp` }) %>
+<section class="page-head"><h1><%= title %></h1></section>
+<%- include("../partials/errors", { errors }) %>
+<form method="post" action="<%= building.id ? `/buildings/${building.id}?_method=PUT` : "/buildings" %>" class="form">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <label>Nombre del edificio <input name="name" value="<%= building.name || "" %>" required></label>
+  <label>Cantidad de pisos <input type="number" min="1" step="1" name="floors" value="<%= building.floors || 1 %>" required></label>
+  <label class="wide">Dirección <input name="address" value="<%= building.address || "" %>"></label>
+  <label class="wide">Notas <textarea name="notes"><%= building.notes || "" %></textarea></label>
+  <label class="check"><input type="checkbox" name="is_active" <%= building.is_active === 0 ? "" : "checked" %>> Activo</label>
+  <div class="form-actions"><button class="button" type="submit">Guardar</button><a href="/buildings">Cancelar</a></div>
+</form>
+<%- include("../partials/footer") %>

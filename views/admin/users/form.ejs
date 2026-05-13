@@ -1,0 +1,53 @@
+<%- include("../../partials/header", { title: title + " | VecinosApp" }) %>
+<h1><%= title %></h1>
+<%- include("../../partials/errors", { errors }) %>
+
+<form method="post" action="<%= user.id ? "/admin/users/" + user.id + "?_method=PUT" : "/admin/users" %>" class="form">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+  <label>Nombre completo
+    <input type="text" name="full_name" value="<%= user.full_name || "" %>" required>
+  </label>
+
+  <label>Correo electrónico
+    <input type="email" name="email" value="<%= user.email || "" %>" required>
+  </label>
+
+  <label>Perfil
+    <select name="role_id" required>
+      <option value="">Seleccionar perfil</option>
+      <% roles.forEach((role) => { %>
+        <option value="<%= role.id %>" <%= Number(user.role_id) === Number(role.id) ? "selected" : "" %>><%= role.name %></option>
+      <% }) %>
+    </select>
+  </label>
+
+  <label>Contraseña <%= user.id ? "(dejar vacío para no cambiar)" : "" %>
+    <input type="password" name="password" <%= user.id ? "" : "required" %> minlength="6">
+  </label>
+
+  <label class="check">
+    <input type="checkbox" name="is_active" value="1" <%= user.is_active === 0 ? "" : "checked" %>> Activo
+  </label>
+
+  <div class="wide">
+    <h2>Edificios asignados</h2>
+    <div class="check-grid">
+      <% if (!buildings.length) { %>
+        <p>No hay edificios activos.</p>
+      <% } %>
+      <% buildings.forEach((building) => { %>
+        <label class="check item">
+          <input type="checkbox" name="building_ids" value="<%= building.id %>" <%= assignedBuildings.includes(building.id) ? "checked" : "" %>>
+          <span><%= building.name %></span>
+        </label>
+      <% }) %>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit">Guardar</button>
+    <a href="/admin/users">Cancelar</a>
+  </div>
+</form>
+<%- include("../../partials/footer") %>

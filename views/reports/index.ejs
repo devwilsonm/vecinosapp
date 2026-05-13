@@ -1,0 +1,43 @@
+<%- include("../partials/header", { title: "Reportes | VecinosApp" }) %>
+<section class="page-head"><h1>Reportes</h1></section>
+<section class="grid two">
+  <div>
+    <h2>Deudas pendientes por ocupante</h2>
+    <% if (debtsByFloor.length) { %>
+      <div class="accordion-list">
+        <% debtsByFloor.forEach((floor, index) => { %>
+          <details class="floor-accordion" <%= index === 0 ? "open" : "" %>>
+            <summary>
+              <span class="floor-title">Piso <%= floor.floor %></span>
+              <span class="floor-meta"><%= floor.occupants.length %> ocupante<%= floor.occupants.length === 1 ? "" : "s" %></span>
+              <span class="floor-balance">S/ <%= money(floor.balance_cents) %></span>
+            </summary>
+            <table class="compact-table"><thead><tr><th>Unidad</th><th>Ocupante</th><th>Saldo</th></tr></thead><tbody>
+              <% floor.occupants.forEach((row) => { %><tr><td><%= row.unit %></td><td><%= row.full_name %></td><td>S/ <%= money(row.balance_cents) %></td></tr><% }) %>
+            </tbody></table>
+          </details>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="detail">Sin deudas.</div>
+    <% } %>
+  </div>
+  <div>
+    <h2>Recibos pendientes</h2>
+    <table><thead><tr><th>Recibo</th><th>Periodo</th><th>Estado</th></tr></thead><tbody>
+      <% pendingReceipts.forEach((receipt) => { %><tr><td><%= receipt.receipt_number %></td><td><%= receipt.period %></td><td><span class="badge status-badge <%= statusClass(receipt.status) %>"><%= receipt.status %></span></td></tr><% }) %>
+      <% if (!pendingReceipts.length) { %><tr><td colspan="3">Sin recibos pendientes.</td></tr><% } %>
+    </tbody></table>
+  </div>
+</section>
+<h2>Pagos por periodo</h2>
+<table><thead><tr><th>Periodo</th><th>Total recaudado</th></tr></thead><tbody>
+  <% paymentsByPeriod.forEach((row) => { %><tr><td><%= row.period %></td><td>S/ <%= money(row.total_cents) %></td></tr><% }) %>
+  <% if (!paymentsByPeriod.length) { %><tr><td colspan="2">Sin pagos.</td></tr><% } %>
+</tbody></table>
+<h2>Total recaudado y saldo por recibo</h2>
+<table><thead><tr><th>Recibo</th><th>Total</th><th>Recaudado</th><th>Saldo</th></tr></thead><tbody>
+  <% receiptTotals.forEach((receipt) => { %><tr><td><%= receipt.receipt_number %></td><td>S/ <%= money(receipt.total_amount_cents) %></td><td>S/ <%= money(receipt.collected_cents) %></td><td>S/ <%= money(receipt.balance_cents) %></td></tr><% }) %>
+  <% if (!receiptTotals.length) { %><tr><td colspan="4">Sin recibos.</td></tr><% } %>
+</tbody></table>
+<%- include("../partials/footer") %>

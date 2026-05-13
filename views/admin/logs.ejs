@@ -1,0 +1,83 @@
+<%- include("../partials/header", { title: "Logs de auditoría | VecinosApp" }) %>
+<div class="page-head">
+  <h1>Logs de auditoría</h1>
+  <a class="button" href="/admin/maintenance">Mantenimiento</a>
+</div>
+
+<section class="stats-grid">
+  <div class="stat"><span>Total de eventos</span><strong><%= summary.total %></strong></div>
+  <div class="stat"><span>Eventos con usuario</span><strong><%= summary.withUser %></strong></div>
+  <div class="stat"><span>Intentos de login</span><strong><%= summary.loginEvents %></strong></div>
+</section>
+
+<form method="get" action="/admin/logs" class="form">
+  <label>Correo o usuario
+    <input type="search" name="email" value="<%= filters.email || "" %>" placeholder="admin@vecinosapp.local">
+  </label>
+  <label>Método
+    <select name="method">
+      <option value="">Todos</option>
+      <% ["GET", "POST", "PUT", "DELETE"].forEach((method) => { %>
+        <option value="<%= method %>" <%= filters.method === method ? "selected" : "" %>><%= method %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label>Estado HTTP
+    <input type="number" name="status_code" value="<%= filters.statusCode || "" %>" placeholder="200">
+  </label>
+  <label>Ruta
+    <input type="search" name="path" value="<%= filters.path || "" %>" placeholder="/login">
+  </label>
+  <div class="form-actions">
+    <button type="submit">Filtrar</button>
+    <a href="/admin/logs">Limpiar</a>
+  </div>
+</form>
+
+<div class="section-head">
+  <h2>Últimos eventos</h2>
+  <span class="badge">Página <%= page %> de <%= totalPages %> · <%= totalLogs %> eventos</span>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th>Fecha</th>
+      <th>Usuario</th>
+      <th>Método</th>
+      <th>Ruta</th>
+      <th>Estado</th>
+      <th>Duración</th>
+      <th>IP</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% if (!logs.length) { %>
+      <tr><td colspan="7">No se encontraron logs con esos filtros.</td></tr>
+    <% } %>
+    <% logs.forEach((log) => { %>
+      <tr>
+        <td><%= log.created_at %></td>
+        <td><%= log.user_email || "Sin usuario" %></td>
+        <td><span class="badge"><%= log.method %></span></td>
+        <td><%= log.path %></td>
+        <td><span class="badge <%= log.status_code >= 400 ? "status-pending" : "ok" %>"><%= log.status_code %></span></td>
+        <td><%= log.duration_ms %> ms</td>
+        <td><%= log.ip || "" %></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<% const baseParams = new URLSearchParams(); %>
+<% if (filters.email) baseParams.set("email", filters.email); %>
+<% if (filters.method) baseParams.set("method", filters.method); %>
+<% if (filters.statusCode) baseParams.set("status_code", filters.statusCode); %>
+<% if (filters.path) baseParams.set("path", filters.path); %>
+<div class="pagination">
+  <% const previousParams = new URLSearchParams(baseParams); previousParams.set("page", Math.max(page - 1, 1)); %>
+  <% const nextParams = new URLSearchParams(baseParams); nextParams.set("page", Math.min(page + 1, totalPages)); %>
+  <a class="button <%= page <= 1 ? "disabled" : "" %>" href="<%= page <= 1 ? "#" : "/admin/logs?" + previousParams.toString() %>">Anterior</a>
+  <span><%= ((page - 1) * pageSize) + (logs.length ? 1 : 0) %>-<%= ((page - 1) * pageSize) + logs.length %> de <%= totalLogs %></span>
+  <a class="button <%= page >= totalPages ? "disabled" : "" %>" href="<%= page >= totalPages ? "#" : "/admin/logs?" + nextParams.toString() %>">Siguiente</a>
+</div>
+<%- include("../partials/footer") %>

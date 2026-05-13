@@ -1,0 +1,9 @@
+<!-- Favicons / App Icons en formato WEBP -->
+<link rel="icon" type="image/webp" sizes="16x16" href="/icons/favicon-16x16.webp">
+<link rel="icon" type="image/webp" sizes="32x32" href="/icons/favicon-32x32.webp">
+<link rel="icon" type="image/webp" sizes="48x48" href="/icons/favicon-48x48.webp">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180x180.webp">
+
+<!-- PWA / Android -->
+<link rel="icon" type="image/webp" sizes="192x192" href="/icons/pwa-icon-192x192.webp">
+<link rel="icon" type="image/webp" sizes="512x512" href="/icons/pwa-icon-512x512.webp">

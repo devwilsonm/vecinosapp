@@ -1,0 +1,22 @@
+{
+  "name": "vecinosapp",
+  "version": "1.0.0",
+  "description": "Aplicación web para administrar recibos, prorrateos y pagos de un edificio.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "start:prod": "node dist/src/server.js",
+    "dev": "node --watch src/server.js",
+    "build": "node scripts/build.js",
+    "review": "node scripts/review.js",
+    "clear-data": "node scripts/clear-data.js",
+    "init-db": "node scripts/init-db.js",
+    "seed-db": "node scripts/seed-db.js"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "method-override": "^3.0.0",
+    "sql.js": "^1.12.0"
+  }
+}

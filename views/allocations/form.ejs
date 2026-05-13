@@ -1,0 +1,129 @@
+<%- include("../partials/header", { title: `Prorratear ${receipt.receipt_number} | VecinosApp` }) %>
+<section class="page-head"><h1>Prorratear <%= receipt.receipt_number %></h1></section>
+<%- include("../partials/errors", { errors }) %>
+<div class="detail">
+  <p><strong>Edificio:</strong> <%= receipt.building_name || "-" %></p>
+  <p><strong>Servicio:</strong> <%= receipt.service_type %> | <strong>Periodo:</strong> <%= receipt.period %></p>
+  <p><strong>Monto total:</strong> S/ <%= money(receipt.total_amount_cents) %></p>
+  <% if (receipt.consumption_total_milli > 0) { %>
+    <p><strong>Consumo total:</strong> <span id="allocationTargetConsumption"><%= consumption(receipt.consumption_total_milli) %></span> <%= receipt.consumption_unit || "" %></p>
+  <% } %>
+</div>
+<form method="post" class="form allocation-form <%= allocationMethod === "mixed" ? "is-mixed" : "" %>" data-total-amount="<%= receipt.total_amount_cents || 0 %>" data-total-consumption="<%= receipt.consumption_total_milli || 0 %>" data-consumption-unit="<%= receipt.consumption_unit || "" %>">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="wide">
+    <h2>Tipo de prorrateo</h2>
+    <div class="check-grid">
+      <label class="check item">
+        <input type="radio" name="allocation_method" value="equal" <%= allocationMethod === "equal" ? "checked" : "" %>>
+        <span>Por monto uniforme · divide el costo total entre los ocupantes seleccionados.</span>
+      </label>
+      <% if (receipt.consumption_total_milli > 0) { %>
+        <label class="check item">
+          <input type="radio" name="allocation_method" value="consumption" <%= allocationMethod === "consumption" ? "checked" : "" %>>
+          <span>Por consumo · calcula el costo según los <%= receipt.consumption_unit || "consumos" %> asignados.</span>
+        </label>
+        <label class="check item">
+          <input type="radio" name="allocation_method" value="mixed" <%= allocationMethod === "mixed" ? "checked" : "" %>>
+          <span>Mixto · primero cobra consumos medidos y reparte el saldo restante.</span>
+        </label>
+      <% } %>
+    </div>
+  </div>
+  <h2>Ocupantes activos</h2>
+  <% if (receipt.consumption_total_milli > 0) { %>
+    <div class="allocation-summary wide">
+      <span>Consumo asignado: <strong id="allocationConsumptionSum">0</strong> <%= receipt.consumption_unit || "" %></span>
+      <span>Diferencia: <strong id="allocationConsumptionDiff">0</strong> <%= receipt.consumption_unit || "" %></span>
+      <span>Monto asignado: <strong id="allocationAmountSum">S/ 0.00</strong></span>
+    </div>
+    <div class="accordion-list wide allocation-table">
+      <% occupantsByFloor.forEach((floor, floorIndex) => { %>
+        <details class="floor-accordion" <%= floorIndex === 0 ? "open" : "" %>>
+          <summary>
+            <span class="floor-title">Piso <%= floor.floor %></span>
+            <span class="floor-meta"><%= floor.occupants.length %> ocupante<%= floor.occupants.length === 1 ? "" : "s" %></span>
+          </summary>
+          <table class="compact-table">
+            <thead>
+              <tr>
+                <th>Incluir</th>
+                <th>Ocupante</th>
+                <th class="mixed-only" <%= allocationMethod === "mixed" ? "" : "hidden" %>>Tipo</th>
+                <th>Monto asignado</th>
+                <th>Consumo (<%= receipt.consumption_unit || "unid." %>)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% floor.occupants.forEach((occupant) => { %>
+                <% const existingAllocation = existingByOccupant[occupant.id]; %>
+                <% const postedValue = Object.prototype.hasOwnProperty.call(postedConsumptions, occupant.id) ? postedConsumptions[occupant.id] : null; %>
+                <% const defaultValue = postedValue !== null ? postedValue : consumption(existingAllocation?.consumption_milli || 0); %>
+                <% const postedType = Object.prototype.hasOwnProperty.call(postedAllocationTypes, occupant.id) ? postedAllocationTypes[occupant.id] : null; %>
+                <% const defaultType = postedType || (existingAllocation?.consumption_milli > 0 ? "consumption" : "equal"); %>
+                <% const checked = selectedIds.has(occupant.id); %>
+                <tr>
+                  <td><input class="allocation-check" type="checkbox" name="occupant_ids" value="<%= occupant.id %>" <%= checked ? "checked" : "" %>></td>
+                  <td><%= occupant.full_name %></td>
+                  <td class="mixed-only" <%= allocationMethod === "mixed" ? "" : "hidden" %>>
+                    <select class="allocation-type" name="allocation_type_<%= occupant.id %>">
+                      <option value="equal" <%= defaultType === "equal" ? "selected" : "" %>>Prorrateo</option>
+                      <option value="consumption" <%= defaultType === "consumption" ? "selected" : "" %>>Consumo</option>
+                    </select>
+                  </td>
+                  <td><input class="allocation-amount" type="text" value="S/ 0.00" readonly></td>
+                  <td><input class="allocation-consumption" type="text" inputmode="decimal" pattern="^\d+([\.,]\d{1,3})?$" data-decimal-input name="consumption_<%= occupant.id %>" value="<%= defaultValue %>"></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </details>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <div class="check-grid">
+      <% occupants.forEach((occupant) => { %>
+        <label class="check item"><input type="checkbox" name="occupant_ids" value="<%= occupant.id %>" <%= selectedIds.has(occupant.id) ? "checked" : "" %>> <%= occupant.full_name %> · Piso <%= occupant.floor %> · <%= occupant.unit %></label>
+      <% }) %>
+    </div>
+  <% } %>
+  <% if (existing.length) { %>
+    <label class="check"><input type="checkbox" name="recalculate" <%= recalculate ? "checked" : "" %>> Confirmo recalcular y reemplazar el prorrateo actual</label>
+  <% } %>
+  <div class="form-actions"><button class="button" type="submit">Generar prorrateo</button><a href="/receipts/<%= receipt.id %>">Volver</a></div>
+</form>
+<% if (existing.length) { %>
+  <h2>Prorrateo actual</h2>
+  <div class="accordion-list">
+    <% existingByFloor.forEach((floor, index) => { %>
+      <details class="floor-accordion" <%= index === 0 ? "open" : "" %>>
+        <summary>
+          <span class="floor-title">Piso <%= floor.floor %></span>
+          <span class="floor-meta"><%= floor.allocations.length %> ocupante<%= floor.allocations.length === 1 ? "" : "s" %></span>
+          <span class="floor-totals allocation-floor-totals">
+            <span>Asignado S/ <%= money(floor.assigned_amount_cents) %></span>
+            <span>Pagado S/ <%= money(floor.paid_amount_cents) %></span>
+            <span>Saldo S/ <%= money(floor.balance_cents) %></span>
+          </span>
+        </summary>
+        <table class="compact-table">
+          <thead><tr><th>Unidad</th><th>Ocupante</th><th>Consumo</th><th>Asignado</th><th>Pagado</th><th>Saldo</th><th>Estado</th></tr></thead>
+          <tbody>
+            <% floor.allocations.forEach((allocation) => { %>
+              <tr>
+                <td><%= allocation.unit %></td>
+                <td><%= allocation.full_name %></td>
+                <td><%= allocation.consumption_milli ? `${consumption(allocation.consumption_milli)} ${receipt.consumption_unit || ""}` : "-" %></td>
+                <td>S/ <%= money(allocation.assigned_amount_cents) %></td>
+                <td>S/ <%= money(allocation.paid_amount_cents) %></td>
+                <td>S/ <%= money(allocation.balance_cents) %></td>
+                <td><span class="badge status-badge <%= statusClass(allocation.status) %>"><%= allocation.status %></span></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </details>
+      <% }) %>
+  </div>
+<% } %>
+<%- include("../partials/footer") %>

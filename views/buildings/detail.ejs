@@ -1,0 +1,45 @@
+<%- include("../partials/header", { title: `${building.name} | VecinosApp` }) %>
+<section class="page-head">
+  <h1><%= building.name %></h1>
+  <div class="actions">
+    <% if (hasPermission("occupants.manage")) { %><a class="button" href="/occupants/new?building_id=<%= building.id %>&return_to=/buildings/<%= building.id %>">Registrar ocupante</a><% } %>
+    <% if (hasPermission("buildings.manage")) { %><a href="/buildings/<%= building.id %>/edit">Editar</a><% } %>
+  </div>
+</section>
+<div class="detail">
+  <p><strong>Dirección:</strong> <%= building.address || "-" %></p>
+  <p><strong>Pisos:</strong> <%= building.floors %></p>
+  <p><strong>Estado:</strong> <%= building.is_active ? "Activo" : "Inactivo" %></p>
+  <p><strong>Notas:</strong> <%= building.notes || "-" %></p>
+</div>
+<% floors.forEach((floor) => { const floorOccupants = occupants.filter((occupant) => String(occupant.floor) === String(floor)); %>
+  <section class="floor-section">
+    <div class="section-head">
+      <h2>Piso <%= floor %></h2>
+      <% if (hasPermission("occupants.manage")) { %><a href="/occupants/new?building_id=<%= building.id %>&floor=<%= encodeURIComponent(floor) %>&return_to=/buildings/<%= building.id %>">Agregar ocupante</a><% } %>
+    </div>
+    <table>
+      <thead><tr><th>Ocupante</th><th>Documento</th><th>Departamento/Habitación</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        <% floorOccupants.forEach((occupant) => { %>
+          <tr>
+            <td><%= occupant.full_name %></td>
+            <td><%= occupant.document %></td>
+            <td><%= occupant.unit %></td>
+            <td><%= occupant.phone || "-" %></td>
+            <td><span class="badge <%= occupant.is_active ? "ok" : "muted" %>"><%= occupant.is_active ? "Activo" : "Inactivo" %></span></td>
+            <td><a href="/occupants/<%= occupant.id %>">Ver</a></td>
+          </tr>
+        <% }) %>
+        <% if (!floorOccupants.length) { %><tr><td colspan="6">Sin ocupantes en este piso.</td></tr><% } %>
+      </tbody>
+    </table>
+  </section>
+<% }) %>
+<% if (hasPermission("buildings.manage")) { %>
+  <form method="post" action="/buildings/<%= building.id %>?_method=DELETE" class="inline-form confirmable" data-confirm="¿Eliminar edificio?">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button class="danger" type="submit">Eliminar edificio</button>
+  </form>
+<% } %>
+<%- include("../partials/footer") %>

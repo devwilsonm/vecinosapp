@@ -1,0 +1,37 @@
+<%- include("../partials/header", { title: `${title} | VecinosApp` }) %>
+<section class="page-head"><h1><%= title %></h1></section>
+<%- include("../partials/errors", { errors }) %>
+<form method="post" action="<%= receipt.id ? `/receipts/${receipt.id}?_method=PUT` : "/receipts" %>" class="form">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <label>Edificio
+    <select name="building_id" required>
+      <option value="">Seleccionar edificio</option>
+      <% buildings.forEach((building) => { %>
+        <option value="<%= building.id %>" <%= Number(receipt.building_id) === Number(building.id) ? "selected" : "" %>><%= building.name %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label>Tipo de servicio
+    <select name="service_type" id="serviceTypeSelect" required>
+      <% ["agua", "luz", "internet", "otro"].forEach((service) => { %>
+        <option value="<%= service %>" <%= receipt.service_type === service ? "selected" : "" %>><%= service %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label>Número de recibo <input name="receipt_number" value="<%= receipt.receipt_number || "" %>" required></label>
+  <label>Periodo <input name="period" value="<%= receipt.period || "" %>" placeholder="enero 2026" required></label>
+  <label>Fecha de emisión <input type="date" name="issue_date" value="<%= receipt.issue_date || "" %>" required></label>
+  <label>Fecha de vencimiento <input type="date" name="due_date" value="<%= receipt.due_date || "" %>" required></label>
+  <label>Monto total a pagar
+    <input type="number" step="0.01" min="0.01" name="total_amount" value="<%= receipt.total_amount || (receipt.total_amount_cents ? money(receipt.total_amount_cents) : "") %>" placeholder="Ej. 420.00" required aria-describedby="receiptAmountHelp">
+    <span class="field-help" id="receiptAmountHelp">Importe total del recibo en soles.</span>
+  </label>
+  <label class="consumption-field">Consumo total del recibo
+    <input type="text" inputmode="decimal" pattern="^\d+([\.,]\d{1,3})?$" name="consumption_total" id="receiptConsumptionInput" data-decimal-input value="<%= receipt.consumption_total || (receipt.consumption_total_milli ? consumption(receipt.consumption_total_milli) : "") %>" placeholder="Ej. 250.5" aria-describedby="receiptConsumptionHelp">
+    <span class="field-help" id="receiptConsumptionHelp">Para luz, ingresa el consumo total en kW que aparece en el recibo.</span>
+  </label>
+  <label>Referencia de archivo <input name="file_reference" value="<%= receipt.file_reference || "" %>"></label>
+  <label>Descripción <textarea name="description"><%= receipt.description || "" %></textarea></label>
+  <div class="form-actions"><button class="button" type="submit">Guardar</button><a href="/receipts">Cancelar</a></div>
+</form>
+<%- include("../partials/footer") %>

@@ -1,0 +1,22 @@
+<%- include("../partials/header", { title: "Administración | VecinosApp" }) %>
+<div class="page-head">
+  <h1>Administración</h1>
+</div>
+
+<section class="stats-grid">
+  <a class="stat stat-link" href="/admin/users"><span>Usuarios</span><strong><%= counts.users %></strong></a>
+  <a class="stat stat-link" href="/admin/roles"><span>Perfiles</span><strong><%= counts.roles %></strong></a>
+  <a class="stat stat-link" href="/admin/permissions"><span>Permisos</span><strong><%= counts.permissions %></strong></a>
+</section>
+
+<section class="detail">
+  <h2>Mantenimiento</h2>
+  <p>Gestiona usuarios, perfiles, permisos base y asignación de edificios por usuario.</p>
+  <div class="actions">
+    <a class="button" href="/admin/users">Usuarios</a>
+    <a class="button" href="/admin/roles">Perfiles</a>
+    <a class="button" href="/admin/permissions">Permisos</a>
+    <a class="button" href="/admin/maintenance">Mantenimiento</a>
+  </div>
+</section>
+<%- include("../partials/footer") %>

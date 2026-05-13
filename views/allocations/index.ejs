@@ -1,0 +1,15 @@
+<%- include("../partials/header", { title: "Prorrateos | VecinosApp" }) %>
+<section class="page-head"><h1>Prorrateos</h1></section>
+<table>
+  <thead><tr><th>Edificio</th><th>Recibo</th><th>Servicio</th><th>Periodo</th><th>Total</th><th>Asignaciones</th><th>Estado</th><th></th></tr></thead>
+  <tbody>
+    <% receipts.forEach((receipt) => { %>
+      <tr>
+        <td><%= receipt.building_name || "-" %></td><td><%= receipt.receipt_number %></td><td><%= receipt.service_type %></td><td><%= receipt.period %></td><td>S/ <%= money(receipt.total_amount_cents) %></td>
+        <td><%= receipt.allocation_count %></td><td><span class="badge status-badge <%= statusClass(receipt.status) %>"><%= receipt.status %></span></td><td><a href="/allocations/receipt/<%= receipt.id %>">Gestionar</a></td>
+      </tr>
+    <% }) %>
+    <% if (!receipts.length) { %><tr><td colspan="8">Sin recibos registrados.</td></tr><% } %>
+  </tbody>
+</table>
+<%- include("../partials/footer") %>

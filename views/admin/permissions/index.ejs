@@ -1,0 +1,30 @@
+<%- include("../../partials/header", { title: "Permisos | VecinosApp" }) %>
+<div class="page-head">
+  <h1>Permisos</h1>
+  <a class="button" href="/admin/roles">Gestionar perfiles</a>
+</div>
+
+<% Object.entries(permissionsByModule).forEach(([moduleName, permissions]) => { %>
+  <section class="occupant-group">
+    <h2><%= moduleName %></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Permiso</th>
+          <th>Clave</th>
+          <th>Descripción</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% permissions.forEach((permission) => { %>
+          <tr>
+            <td><%= permission.name %></td>
+            <td><%= permission.key %></td>
+            <td><%= permission.description || "" %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </section>
+<% }) %>
+<%- include("../../partials/footer") %>

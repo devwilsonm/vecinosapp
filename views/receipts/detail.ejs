@@ -1,0 +1,59 @@
+<%- include("../partials/header", { title: `Recibo ${receipt.receipt_number} | VecinosApp` }) %>
+<section class="page-head">
+  <h1>Recibo <%= receipt.receipt_number %></h1>
+  <div class="actions"><a class="button" href="/allocations/receipt/<%= receipt.id %>">Prorratear</a><a href="/receipts/<%= receipt.id %>/edit">Editar</a></div>
+</section>
+<div class="detail">
+  <p><strong>Edificio:</strong> <%= receipt.building_name || "-" %></p>
+  <p><strong>Servicio:</strong> <%= receipt.service_type %></p>
+  <p><strong>Periodo:</strong> <%= receipt.period %></p>
+  <p><strong>Emisión:</strong> <%= receipt.issue_date %> | <strong>Vencimiento:</strong> <%= receipt.due_date %></p>
+  <p><strong>Total:</strong> S/ <%= money(receipt.total_amount_cents) %></p>
+  <% if (receipt.consumption_total_milli > 0) { %>
+    <p><strong>Consumo total:</strong> <%= consumption(receipt.consumption_total_milli) %> <%= receipt.consumption_unit || "" %></p>
+  <% } %>
+  <p><strong>Estado:</strong> <span class="badge status-badge <%= statusClass(receipt.status) %>"><%= receipt.status %></span></p>
+  <p><strong>Descripción:</strong> <%= receipt.description || "-" %></p>
+</div>
+<h2>Detalle del prorrateo</h2>
+<% if (allocationsByFloor.length) { %>
+  <div class="accordion-list">
+    <% allocationsByFloor.forEach((floor, index) => { %>
+      <details class="floor-accordion" <%= index === 0 ? "open" : "" %>>
+        <summary>
+          <span class="floor-title">Piso <%= floor.floor %></span>
+          <span class="floor-meta"><%= floor.allocations.length %> ocupante<%= floor.allocations.length === 1 ? "" : "s" %></span>
+          <span class="floor-totals allocation-floor-totals">
+            <span>Asignado S/ <%= money(floor.assigned_amount_cents) %></span>
+            <span>Pagado S/ <%= money(floor.paid_amount_cents) %></span>
+            <span>Saldo S/ <%= money(floor.balance_cents) %></span>
+          </span>
+        </summary>
+        <table class="compact-table">
+          <thead><tr><th>Unidad</th><th>Ocupante</th><th>Consumo</th><th>Asignado</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
+          <tbody>
+            <% floor.allocations.forEach((allocation) => { %>
+              <tr>
+                <td><%= allocation.unit %></td>
+                <td><%= allocation.full_name %></td>
+                <td><%= allocation.consumption_milli ? `${consumption(allocation.consumption_milli)} ${receipt.consumption_unit || ""}` : "-" %></td>
+                <td>S/ <%= money(allocation.assigned_amount_cents) %></td>
+                <td>S/ <%= money(allocation.paid_amount_cents) %></td>
+                <td>S/ <%= money(allocation.balance_cents) %></td>
+                <td><span class="badge status-badge <%= statusClass(allocation.status) %>"><%= allocation.status %></span></td>
+                <td><% if (allocation.balance_cents > 0) { %><a href="/payments/new/<%= allocation.id %>">Registrar pago</a><% } %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </details>
+    <% }) %>
+  </div>
+<% } else { %>
+  <div class="detail">Este recibo aún no fue prorrateado.</div>
+<% } %>
+<form method="post" action="/receipts/<%= receipt.id %>?_method=DELETE" class="inline-form confirmable" data-confirm="¿Eliminar recibo?">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <button class="danger" type="submit">Eliminar recibo</button>
+</form>
+<%- include("../partials/footer") %>

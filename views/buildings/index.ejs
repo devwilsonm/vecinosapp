@@ -1,0 +1,25 @@
+<%- include("../partials/header", { title: "Edificios | VecinosApp" }) %>
+<section class="page-head"><h1>Edificios</h1><% if (hasPermission("buildings.manage")) { %><a class="button" href="/buildings/new">Nuevo edificio</a><% } %></section>
+<table>
+  <thead><tr><th>Nombre</th><th>Dirección</th><th>Pisos</th><th>Ocupantes</th><th>Estado</th><th>Acciones</th></tr></thead>
+  <tbody>
+    <% buildings.forEach((building) => { %>
+      <tr>
+        <td><%= building.name %></td>
+        <td><%= building.address || "-" %></td>
+        <td><%= building.floors %></td>
+        <td><%= building.occupant_count %></td>
+        <td><span class="badge <%= building.is_active ? "ok" : "muted" %>"><%= building.is_active ? "Activo" : "Inactivo" %></span></td>
+        <td class="actions">
+          <a href="/buildings/<%= building.id %>">Ver pisos</a>
+          <% if (hasPermission("buildings.manage")) { %>
+            <a href="/buildings/<%= building.id %>/edit">Editar</a>
+            <form method="post" action="/buildings/<%= building.id %>/deactivate"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit">Desactivar</button></form>
+          <% } %>
+        </td>
+      </tr>
+    <% }) %>
+    <% if (!buildings.length) { %><tr><td colspan="6">Sin edificios registrados.</td></tr><% } %>
+  </tbody>
+</table>
+<%- include("../partials/footer") %>

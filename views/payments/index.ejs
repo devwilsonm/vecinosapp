@@ -1,0 +1,73 @@
+<%- include("../partials/header", { title: "Pagos | VecinosApp" }) %>
+<section class="page-head">
+  <h1>Pagos</h1>
+  <form method="get" class="dashboard-filter">
+    <label>Edificio
+      <select name="building_id" class="auto-submit">
+        <% buildings.forEach((building) => { %>
+          <option value="<%= building.id %>" <%= Number(selectedBuildingId) === Number(building.id) ? "selected" : "" %>><%= building.name %></option>
+        <% }) %>
+      </select>
+    </label>
+  </form>
+</section>
+
+<div class="tabs" role="tablist" aria-label="Secciones de pagos">
+  <button class="tab-button active" type="button" data-tab-target="pendingTab">Deudas pendientes</button>
+  <button class="tab-button" type="button" data-tab-target="paidTab">Pagos registrados</button>
+</div>
+
+<section id="pendingTab" class="tab-panel active">
+  <% const pendingFloors = Object.keys(pendingByFloor).sort((a, b) => Number(a) - Number(b) || a.localeCompare(b)); %>
+  <% pendingFloors.forEach((floor) => { const rows = pendingByFloor[floor]; %>
+    <section class="floor-section">
+      <div class="section-head"><h2>Piso <%= floor %></h2><span class="badge muted"><%= rows.length %> deuda<%= rows.length === 1 ? "" : "s" %></span></div>
+      <table>
+        <thead><tr><th>Unidad</th><th>Ocupante</th><th>Recibo</th><th>Periodo</th><th>Asignado</th><th>Saldo</th><th></th></tr></thead>
+        <tbody>
+          <% rows.forEach((allocation) => { %>
+            <tr>
+              <td><%= allocation.unit %></td>
+              <td><%= allocation.full_name %></td>
+              <td><%= allocation.receipt_number %></td>
+              <td><%= allocation.period %></td>
+              <td>S/ <%= money(allocation.assigned_amount_cents) %></td>
+              <td>S/ <%= money(allocation.balance_cents) %></td>
+              <td><a href="/payments/new/<%= allocation.id %>">Registrar pago</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+  <% }) %>
+  <% if (!pendingFloors.length) { %><div class="detail">No hay deudas pendientes para este edificio.</div><% } %>
+</section>
+
+<section id="paidTab" class="tab-panel">
+  <% const paidFloors = Object.keys(paymentsByFloor).sort((a, b) => Number(a) - Number(b) || a.localeCompare(b)); %>
+  <% paidFloors.forEach((floor) => { const rows = paymentsByFloor[floor]; %>
+    <section class="floor-section">
+      <div class="section-head"><h2>Piso <%= floor %></h2><span class="badge muted"><%= rows.length %> pago<%= rows.length === 1 ? "" : "s" %></span></div>
+      <table>
+        <thead><tr><th>Fecha</th><th>Unidad</th><th>Ocupante</th><th>Recibo</th><th>Periodo</th><th>Método</th><th>Monto</th><th>Observación</th></tr></thead>
+        <tbody>
+          <% rows.forEach((payment) => { %>
+            <tr>
+              <td><%= payment.payment_date %></td>
+              <td><%= payment.unit %></td>
+              <td><%= payment.full_name %></td>
+              <td><%= payment.receipt_number %></td>
+              <td><%= payment.period %></td>
+              <td><%= payment.payment_method %></td>
+              <td>S/ <%= money(payment.amount_cents) %></td>
+              <td><%= payment.note || "-" %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+  <% }) %>
+  <% if (!paidFloors.length) { %><div class="detail">No hay pagos registrados para este edificio.</div><% } %>
+</section>
+
+<%- include("../partials/footer") %>

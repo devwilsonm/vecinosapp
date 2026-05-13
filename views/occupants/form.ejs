@@ -1,0 +1,28 @@
+<%- include("../partials/header", { title: `${title} | VecinosApp` }) %>
+<section class="page-head"><h1><%= title %></h1></section>
+<%- include("../partials/errors", { errors }) %>
+<form method="post" action="<%= occupant.id ? `/occupants/${occupant.id}?_method=PUT` : "/occupants" %>" class="form">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <input type="hidden" name="return_to" value="<%= occupant.return_to || (occupant.building_id && !occupant.id ? `/buildings/${occupant.building_id}` : "") %>">
+  <label>Edificio
+    <select name="building_id" id="buildingSelect" required>
+      <option value="">Seleccionar edificio</option>
+      <% buildings.forEach((building) => { %>
+        <option value="<%= building.id %>" data-floors="<%= building.floors %>" <%= Number(occupant.building_id) === Number(building.id) ? "selected" : "" %>><%= building.name %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label>Nombre completo <input name="full_name" value="<%= occupant.full_name || "" %>" required></label>
+  <label>Documento <input name="document" value="<%= occupant.document || "" %>" required></label>
+  <label>Teléfono <input name="phone" value="<%= occupant.phone || "" %>"></label>
+  <label>Correo electrónico <input type="email" name="email" value="<%= occupant.email || "" %>"></label>
+  <label>Piso
+    <select name="floor" id="floorSelect" data-selected-floor="<%= occupant.floor || "" %>" required>
+      <option value="">Seleccionar piso</option>
+    </select>
+  </label>
+  <label>Departamento o habitación <input name="unit" value="<%= occupant.unit || "" %>" required></label>
+  <label class="check"><input type="checkbox" name="is_active" <%= occupant.is_active === 0 ? "" : "checked" %>> Activo</label>
+  <div class="form-actions"><button class="button" type="submit">Guardar</button><a href="/occupants">Cancelar</a></div>
+</form>
+<%- include("../partials/footer") %>

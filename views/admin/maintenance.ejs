@@ -1,0 +1,31 @@
+<%- include("../partials/header", { title: "Mantenimiento | VecinosApp" }) %>
+<div class="page-head">
+  <h1>Mantenimiento</h1>
+</div>
+
+<section class="detail">
+  <h2>Estado del mantenimiento</h2>
+  <p>Base principal y auditoría activas. Las tareas destructivas no se exponen desde esta pantalla.</p>
+  <div class="actions">
+    <a class="button" href="/admin/logs">Ver logs de auditoría</a>
+  </div>
+</section>
+
+<h2>Usuarios registrados</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Correo</th>
+      <th>Registros</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% logs.forEach((item) => { %>
+      <tr>
+        <td><%= item.email %></td>
+        <td><%= item.total %></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+<%- include("../partials/footer") %>

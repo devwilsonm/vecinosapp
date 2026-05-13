@@ -1,0 +1,72 @@
+<%- include("partials/header", { title: "Dashboard | VecinosApp" }) %>
+<section class="page-head">
+  <h1>Dashboard</h1>
+  <form method="get" class="dashboard-filter">
+    <label>Edificio
+      <select name="building_id" class="auto-submit">
+        <% buildings.forEach((building) => { %>
+          <option value="<%= building.id %>" <%= Number(selectedBuildingId) === Number(building.id) ? "selected" : "" %>><%= building.name %></option>
+        <% }) %>
+      </select>
+    </label>
+  </form>
+</section>
+<section class="stats-grid">
+  <div class="stat"><span>Ocupantes</span><strong><%= totalOccupants %></strong></div>
+  <div class="stat"><span>Recibos</span><strong><%= totalReceipts %></strong></div>
+  <div class="stat"><span>Recibos pendientes</span><strong><%= pendingReceipts %></strong></div>
+</section>
+<div class="stats-dots" aria-label="Indicadores del carrusel de resumen">
+  <button type="button" class="active" data-slide-index="0" aria-label="Ver ocupantes"></button>
+  <button type="button" data-slide-index="1" aria-label="Ver recibos"></button>
+  <button type="button" data-slide-index="2" aria-label="Ver recibos pendientes"></button>
+</div>
+<section class="grid two">
+  <div>
+    <h2>Pagos recientes</h2>
+    <table><thead><tr><th>Fecha</th><th>Ocupante</th><th>Recibo</th><th>Monto</th></tr></thead><tbody>
+      <% recentPayments.forEach((payment) => { %>
+        <tr><td><%= payment.payment_date %></td><td><%= payment.full_name %></td><td><%= payment.receipt_number %></td><td>S/ <%= money(payment.amount_cents) %></td></tr>
+      <% }) %>
+      <% if (!recentPayments.length) { %><tr><td colspan="4">Sin pagos registrados.</td></tr><% } %>
+    </tbody></table>
+  </div>
+  <div>
+    <h2>Deudas por ocupante</h2>
+    <% if (debtsByFloor.length) { %>
+      <div class="accordion-list">
+        <% debtsByFloor.forEach((floor, index) => { %>
+          <details class="floor-accordion" <%= index === 0 ? "open" : "" %>>
+            <summary>
+              <span class="floor-title">Piso <%= floor.floor %></span>
+              <span class="floor-meta"><%= floor.occupants.length %> ocupante<%= floor.occupants.length === 1 ? "" : "s" %></span>
+              <span class="floor-balance">S/ <%= money(floor.balance_cents) %></span>
+              <span class="floor-progress">
+                <span><%= floor.paid_percent %>% pagado</span>
+                <span class="mini-bar <%= floor.percent_class %>"><span style="width: <%= floor.paid_percent %>%"></span></span>
+              </span>
+            </summary>
+            <table class="compact-table"><thead><tr><th>Unidad</th><th>Ocupante</th><th>Saldo</th><th>% pagado</th></tr></thead><tbody>
+              <% floor.occupants.forEach((debt) => { %>
+                <tr>
+                  <td><%= debt.unit %></td>
+                  <td><%= debt.full_name %></td>
+                  <td>S/ <%= money(debt.balance_cents) %></td>
+                  <td>
+                    <div class="percent-cell">
+                      <span><%= debt.paid_percent %>%</span>
+                      <div class="mini-bar <%= debt.percent_class %>"><span style="width: <%= debt.paid_percent %>%"></span></div>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody></table>
+          </details>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <table><tbody><tr><td>No hay deudas pendientes.</td></tr></tbody></table>
+    <% } %>
+  </div>
+</section>
+<%- include("partials/footer") %>

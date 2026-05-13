@@ -1,0 +1,46 @@
+<%- include("../../partials/header", { title: title + " | VecinosApp" }) %>
+<h1><%= title %></h1>
+<%- include("../../partials/errors", { errors }) %>
+
+<form method="post" action="<%= role.id ? "/admin/roles/" + role.id + "?_method=PUT" : "/admin/roles" %>" class="form">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+  <label>Nombre del perfil
+    <input type="text" name="name" value="<%= role.name || "" %>" required>
+  </label>
+
+  <label>Clave
+    <input type="text" name="key" value="<%= role.key || "" %>" <%= role.id ? "readonly" : "required" %>>
+  </label>
+
+  <label class="wide">Descripción
+    <textarea name="description"><%= role.description || "" %></textarea>
+  </label>
+
+  <label class="check">
+    <input type="checkbox" name="is_active" value="1" <%= role.is_active === 0 ? "" : "checked" %>> Activo
+  </label>
+
+  <div class="wide">
+    <h2>Permisos</h2>
+    <% Object.entries(permissionsByModule).forEach(([moduleName, permissions]) => { %>
+      <section class="permission-group">
+        <h3><%= moduleName %></h3>
+        <div class="check-grid">
+          <% permissions.forEach((permission) => { %>
+            <label class="check item">
+              <input type="checkbox" name="permission_ids" value="<%= permission.id %>" <%= selectedPermissions.includes(permission.id) ? "checked" : "" %>>
+              <span><%= permission.name %></span>
+            </label>
+          <% }) %>
+        </div>
+      </section>
+    <% }) %>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit">Guardar</button>
+    <a href="/admin/roles">Cancelar</a>
+  </div>
+</form>
+<%- include("../../partials/footer") %>

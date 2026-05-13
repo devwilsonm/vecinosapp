@@ -1,0 +1,16 @@
+<%- include("../partials/header", { title: "Recibos | VecinosApp" }) %>
+<section class="page-head"><h1>Recibos</h1><a class="button" href="/receipts/new">Nuevo recibo</a></section>
+<table>
+  <thead><tr><th>Edificio</th><th>Servicio</th><th>Número</th><th>Periodo</th><th>Vence</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>
+  <tbody>
+    <% receipts.forEach((receipt) => { %>
+      <tr>
+        <td><%= receipt.building_name || "-" %></td><td><%= receipt.service_type %></td><td><%= receipt.receipt_number %></td><td><%= receipt.period %></td><td><%= receipt.due_date %></td>
+        <td>S/ <%= money(receipt.total_amount_cents) %></td><td><span class="badge status-badge <%= statusClass(receipt.status) %>"><%= receipt.status %></span></td>
+        <td class="actions"><a href="/receipts/<%= receipt.id %>">Ver</a><a href="/receipts/<%= receipt.id %>/edit">Editar</a><a href="/allocations/receipt/<%= receipt.id %>">Prorratear</a></td>
+      </tr>
+    <% }) %>
+    <% if (!receipts.length) { %><tr><td colspan="8">Sin recibos registrados.</td></tr><% } %>
+  </tbody>
+</table>
+<%- include("../partials/footer") %>

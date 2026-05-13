@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title || "VecinosApp" %></title>
+  <link rel="icon" type="image/webp" sizes="16x16" href="/favicon/favicon-16x16.webp">
+  <link rel="icon" type="image/webp" sizes="32x32" href="/favicon/favicon-32x32.webp">
+  <link rel="icon" type="image/webp" sizes="48x48" href="/favicon/favicon-48x48.webp">
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon-180x180.webp">
+  <link rel="manifest" href="/favicon/site.webmanifest">
+  <meta name="theme-color" content="#256f7c">
+  <link rel="stylesheet" href="/css/styles.css?v=<%= assetVersion %>">
+</head>
+<body>
+  <header class="topbar">
+    <div class="nav-row">
+      <a class="brand" href="/">
+        <img class="brand-logo" src="/favicon/icon-64x64.webp" alt="" width="32" height="32">
+        <span>VecinosApp</span>
+      </a>
+      <% if (currentUser) { %>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mainNav" aria-label="Abrir menú">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      <% } %>
+    </div>
+    <% if (currentUser) { %>
+      <nav id="mainNav" class="main-nav">
+        <a class="nav-link" href="/">Dashboard</a>
+
+        <% if (hasPermission("buildings.manage") || hasPermission("occupants.manage")) { %>
+          <div class="nav-item">
+            <button class="nav-trigger" type="button" aria-expanded="false">Gestión <span aria-hidden="true">▾</span></button>
+            <div class="nav-menu">
+              <% if (hasPermission("buildings.manage")) { %><a href="/buildings">Edificios</a><% } %>
+              <% if (hasPermission("occupants.manage")) { %><a href="/occupants">Ocupantes</a><% } %>
+            </div>
+          </div>
+        <% } %>
+
+        <% if (hasPermission("receipts.manage") || hasPermission("allocations.manage") || hasPermission("payments.manage")) { %>
+          <div class="nav-item">
+            <button class="nav-trigger" type="button" aria-expanded="false">Servicios <span aria-hidden="true">▾</span></button>
+            <div class="nav-menu">
+              <% if (hasPermission("receipts.manage")) { %><a href="/receipts">Recibos</a><% } %>
+              <% if (hasPermission("allocations.manage")) { %><a href="/allocations">Prorrateos</a><% } %>
+              <% if (hasPermission("payments.manage")) { %><a href="/payments">Pagos</a><% } %>
+            </div>
+          </div>
+        <% } %>
+
+        <% if (hasPermission("reports.view")) { %><a class="nav-link" href="/reports">Reportes</a><% } %>
+
+        <% if (isSuperAdmin) { %>
+          <div class="nav-item">
+            <button class="nav-trigger" type="button" aria-expanded="false">Administración <span aria-hidden="true">▾</span></button>
+            <div class="nav-menu">
+              <a href="/admin/users">Usuarios</a>
+              <a href="/admin/roles">Perfiles</a>
+              <a href="/admin/permissions">Permisos</a>
+              <a href="/admin/logs">Logs de auditoría</a>
+              <a href="/admin/maintenance">Mantenimiento</a>
+            </div>
+          </div>
+        <% } %>
+
+        <div class="nav-item">
+          <button class="nav-trigger" type="button" aria-expanded="false">Cuenta <span aria-hidden="true">▾</span></button>
+          <div class="nav-menu nav-menu-right">
+            <span class="nav-disabled"><%= currentUser.email %></span>
+            <span class="nav-disabled"><%= currentUser.role_name || "Sin perfil" %></span>
+            <form method="post" action="/logout" class="nav-logout">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit">Salir</button>
+            </form>
+          </div>
+        </div>
+      </nav>
+    <% } %>
+  </header>
+  <main class="container">
+    <% if (flash) { %>
+      <div class="alert <%= flash.type %>"><%= flash.message %></div>
+    <% } %>

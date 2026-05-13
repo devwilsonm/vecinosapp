@@ -1,0 +1,25 @@
+<%- include("../partials/header", { title: `${occupant.full_name} | VecinosApp` }) %>
+<section class="page-head"><h1><%= occupant.full_name %></h1><a class="button" href="/occupants/<%= occupant.id %>/edit">Editar</a></section>
+<div class="detail">
+  <p><strong>Documento:</strong> <%= occupant.document %></p>
+  <p><strong>Edificio:</strong> <%= occupant.building_name || "-" %></p>
+  <p><strong>Teléfono:</strong> <%= occupant.phone || "-" %></p>
+  <p><strong>Email:</strong> <%= occupant.email || "-" %></p>
+  <p><strong>Ubicación:</strong> Piso <%= occupant.floor %>, <%= occupant.unit %></p>
+  <p><strong>Estado:</strong> <%= occupant.is_active ? "Activo" : "Inactivo" %></p>
+</div>
+<h2>Historial de pagos y deudas</h2>
+<table>
+  <thead><tr><th>Recibo</th><th>Periodo</th><th>Asignado</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
+  <tbody>
+    <% allocations.forEach((allocation) => { %>
+      <tr>
+        <td><%= allocation.receipt_number %></td><td><%= allocation.period %></td>
+        <td>S/ <%= money(allocation.assigned_amount_cents) %></td><td>S/ <%= money(allocation.paid_amount_cents) %></td><td>S/ <%= money(allocation.balance_cents) %></td><td><span class="badge status-badge <%= statusClass(allocation.status) %>"><%= allocation.status %></span></td>
+        <td><% if (allocation.balance_cents > 0) { %><a href="/payments/new/<%= allocation.id %>">Pagar</a><% } %></td>
+      </tr>
+    <% }) %>
+    <% if (!allocations.length) { %><tr><td colspan="7">Sin asignaciones.</td></tr><% } %>
+  </tbody>
+</table>
+<%- include("../partials/footer") %>

@@ -1,0 +1,12 @@
+<%- include("../partials/header", { title: "Iniciar sesión | VecinosApp" }) %>
+<section class="login-wrap">
+  <form method="post" action="/login" class="form login-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <h1>Iniciar sesión</h1>
+    <%- include("../partials/errors", { errors }) %>
+    <label>Correo electrónico <input type="email" name="email" required autofocus></label>
+    <label>Contraseña <input type="password" name="password" required></label>
+    <div class="form-actions"><button class="button" type="submit">Entrar</button></div>
+  </form>
+</section>
+<%- include("../partials/footer") %>
