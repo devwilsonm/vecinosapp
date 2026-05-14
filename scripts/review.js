@@ -148,6 +148,38 @@ function checkSecurityGuards() {
   });
 }
 
+function checkNpmSupplyChainRisk() {
+  const packageJson = JSON.parse(read("package.json"));
+  const scripts = packageJson.scripts || {};
+  const installLifecycleScripts = ["preinstall", "install", "postinstall", "prepare"];
+  const declaredInstallScripts = installLifecycleScripts.filter((script) => Object.prototype.hasOwnProperty.call(scripts, script));
+  addCheck(
+    "package.json sin scripts de instalación automática",
+    declaredInstallScripts.length === 0,
+    declaredInstallScripts.length ? `Scripts detectados: ${declaredInstallScripts.join(", ")}` : ""
+  );
+
+  const lock = read("package-lock.json");
+  addCheck("package-lock sin hasInstallScript", !lock.includes("hasInstallScript"));
+
+  const suspiciousPackages = [
+    '"node_modules/axios"',
+    '"node_modules/plain-crypto-js"',
+    '"node_modules/openclaw"',
+    '"node_modules/cline"',
+    '"node_modules/napi-postinstall"',
+    '"node_modules/eslint-config-prettier"',
+    '"node_modules/synckit"',
+    '"node_modules/@pkgr/core"'
+  ];
+  const matches = suspiciousPackages.filter((name) => lock.includes(name));
+  addCheck(
+    "package-lock sin paquetes IoC npm recientes",
+    matches.length === 0,
+    matches.length ? `Paquetes detectados: ${matches.join(", ")}` : ""
+  );
+}
+
 function checkAuditColumns() {
   const db = read("src/db.js");
   const routeFiles = [
@@ -205,6 +237,7 @@ function checkBuildAndAudit() {
 }
 
 checkSyntax();
+checkNpmSupplyChainRisk();
 checkSecurityGuards();
 checkAuditColumns();
 checkPerformance();
