@@ -299,7 +299,7 @@ router.get("/logs", (req, res) => {
   const page = Math.max(Number(req.query.page) || 1, 1);
   const filters = {
     email: cleanText(req.query.email, 160),
-    method: ["GET", "POST", "PUT", "DELETE"].includes(req.query.method) ? req.query.method : "",
+    method: ["POST", "PUT", "PATCH", "DELETE"].includes(req.query.method) ? req.query.method : "",
     statusCode: Number.isInteger(Number(req.query.status_code)) ? Number(req.query.status_code) : 0,
     path: cleanText(req.query.path, 200),
     limit: pageSize,

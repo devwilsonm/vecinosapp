@@ -33,6 +33,8 @@ async function initLogDb() {
       path TEXT NOT NULL,
       status_code INTEGER NOT NULL,
       duration_ms INTEGER NOT NULL,
+      action TEXT,
+      message TEXT,
       ip TEXT,
       user_agent TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -40,15 +42,24 @@ async function initLogDb() {
     CREATE INDEX IF NOT EXISTS idx_api_logs_created_at ON api_logs(created_at);
     CREATE INDEX IF NOT EXISTS idx_api_logs_user ON api_logs(user_id, created_at);
   `);
+  ensureLogColumn("api_logs", "action", "TEXT");
+  ensureLogColumn("api_logs", "message", "TEXT");
   saveLogDb();
+}
+
+function ensureLogColumn(table, column, definition) {
+  const columns = logDatabase.exec(`PRAGMA table_info(${table})`)[0]?.values.map((item) => item[1]) || [];
+  if (!columns.includes(column)) {
+    logDatabase.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
 }
 
 function writeApiLog(entry) {
   if (!logDatabase) return;
   logDatabase.run(
     `
-      INSERT INTO api_logs (user_id, user_email, method, path, status_code, duration_ms, ip, user_agent)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO api_logs (user_id, user_email, method, path, status_code, duration_ms, action, message, ip, user_agent)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       entry.userId || null,
@@ -57,6 +68,8 @@ function writeApiLog(entry) {
       entry.path,
       entry.statusCode,
       entry.durationMs,
+      entry.action || null,
+      entry.message || null,
       entry.ip || null,
       entry.userAgent || null
     ]
@@ -64,9 +77,20 @@ function writeApiLog(entry) {
   saveLogDb();
 }
 
+function baseAuditWhere() {
+  return [
+    "method IN ('POST', 'PUT', 'PATCH', 'DELETE')",
+    "path NOT LIKE '/css/%'",
+    "path NOT LIKE '/js/%'",
+    "path NOT LIKE '/favicon/%'",
+    "path != '/favicon.ico'",
+    "path NOT LIKE '/.well-known/%'"
+  ];
+}
+
 function listApiLogs(filters = {}) {
   if (!logDatabase) return [];
-  const where = [];
+  const where = baseAuditWhere();
   const params = [];
 
   if (filters.email) {
@@ -89,7 +113,7 @@ function listApiLogs(filters = {}) {
   const limit = Math.min(Math.max(Number(filters.limit) || 50, 10), 100);
   const offset = Math.max(Number(filters.offset) || 0, 0);
   const sql = `
-    SELECT id, user_id, user_email, method, path, status_code, duration_ms, ip, user_agent, created_at
+    SELECT id, user_id, user_email, method, path, status_code, duration_ms, action, message, ip, user_agent, created_at
     FROM api_logs
     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
     ORDER BY id DESC
@@ -108,7 +132,7 @@ function listApiLogs(filters = {}) {
 
 function countApiLogs(filters = {}) {
   if (!logDatabase) return 0;
-  const where = [];
+  const where = baseAuditWhere();
   const params = [];
 
   if (filters.email) {
@@ -150,6 +174,7 @@ function apiLogSummary() {
       SUM(CASE WHEN user_id IS NOT NULL THEN 1 ELSE 0 END) AS with_user,
       SUM(CASE WHEN path = '/login' AND method = 'POST' THEN 1 ELSE 0 END) AS login_events
     FROM api_logs
+    WHERE ${baseAuditWhere().join(" AND ")}
   `);
   const values = result[0]?.values[0] || [0, 0, 0];
   return { total: values[0] || 0, withUser: values[1] || 0, loginEvents: values[2] || 0 };

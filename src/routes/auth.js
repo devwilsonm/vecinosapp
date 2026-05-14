@@ -12,16 +12,20 @@ router.get("/login", (req, res) => {
 router.post("/login", (req, res) => {
   const email = String(req.body.email || "").trim().toLowerCase();
   const password = String(req.body.password || "");
+  req.auditUserEmail = email;
   const user = db.prepare("SELECT * FROM users WHERE email = ? AND is_active = 1").get(email);
   if (!user || !verifyPassword(password, user.password_hash)) {
+    req.auditMessage = "Intento de login fallido.";
     return res.status(401).render("auth/login", { errors: ["Correo o contraseña incorrectos."] });
   }
   req.currentUser = { id: user.id, full_name: user.full_name, email: user.email };
+  req.auditMessage = "Inicio de sesión correcto.";
   setSession(res, user.id);
   res.redirect("/");
 });
 
 router.post("/logout", (req, res) => {
+  req.auditMessage = "Cierre de sesión.";
   clearSession(res);
   res.redirect("/login");
 });

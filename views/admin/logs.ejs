@@ -17,7 +17,7 @@
   <label>Método
     <select name="method">
       <option value="">Todos</option>
-      <% ["GET", "POST", "PUT", "DELETE"].forEach((method) => { %>
+      <% ["POST", "PUT", "PATCH", "DELETE"].forEach((method) => { %>
         <option value="<%= method %>" <%= filters.method === method ? "selected" : "" %>><%= method %></option>
       <% }) %>
     </select>
@@ -43,24 +43,30 @@
     <tr>
       <th>Fecha</th>
       <th>Usuario</th>
+      <th>Acción</th>
       <th>Método</th>
       <th>Ruta</th>
       <th>Estado</th>
+      <th>Mensaje</th>
       <th>Duración</th>
       <th>IP</th>
     </tr>
   </thead>
   <tbody>
     <% if (!logs.length) { %>
-      <tr><td colspan="7">No se encontraron logs con esos filtros.</td></tr>
+      <tr><td colspan="9">No se encontraron logs con esos filtros.</td></tr>
     <% } %>
     <% logs.forEach((log) => { %>
       <tr>
-        <td><%= log.created_at %></td>
+        <td>
+          <span data-local-datetime="<%= log.created_at %>"><%= log.created_at %></span>
+        </td>
         <td><%= log.user_email || "Sin usuario" %></td>
+        <td><%= log.action || "-" %></td>
         <td><span class="badge"><%= log.method %></span></td>
         <td><%= log.path %></td>
         <td><span class="badge <%= log.status_code >= 400 ? "status-pending" : "ok" %>"><%= log.status_code %></span></td>
+        <td><%= log.message || "-" %></td>
         <td><%= log.duration_ms %> ms</td>
         <td><%= log.ip || "" %></td>
       </tr>

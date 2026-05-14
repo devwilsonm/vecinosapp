@@ -80,21 +80,80 @@ app.use((req, res, next) => {
 
 app.use((req, res, next) => {
   const startedAt = Date.now();
+  const originalRender = res.render.bind(res);
+  const originalRedirect = res.redirect.bind(res);
+  res.render = (view, options, callback) => {
+    if (options?.message && !req.auditMessage) req.auditMessage = String(options.message);
+    if (Array.isArray(options?.errors) && options.errors.length && !req.auditMessage) {
+      req.auditMessage = options.errors.join(" | ");
+    }
+    return originalRender(view, options, callback);
+  };
+  res.redirect = (statusOrUrl, maybeUrl) => {
+    const target = typeof statusOrUrl === "string" ? statusOrUrl : maybeUrl;
+    if (target && !req.auditMessage) {
+      try {
+        const url = new URL(target, "http://vecinosapp.local");
+        const message = url.searchParams.get("message");
+        if (message) req.auditMessage = message;
+      } catch {
+        // Keep redirect behavior unchanged if the URL cannot be parsed.
+      }
+    }
+    if (typeof statusOrUrl === "number") return originalRedirect(statusOrUrl, maybeUrl);
+    return originalRedirect(statusOrUrl);
+  };
   res.on("finish", () => {
-    if (req.path.startsWith("/css/") || req.path.startsWith("/js/")) return;
+    if (!shouldAuditRequest(req, res.statusCode)) return;
     writeApiLog({
       userId: req.currentUser?.id,
-      userEmail: req.currentUser?.email,
+      userEmail: req.currentUser?.email || req.auditUserEmail,
       method: req.method,
       path: req.originalUrl,
       statusCode: res.statusCode,
       durationMs: Date.now() - startedAt,
+      action: auditAction(req),
+      message: auditMessage(req, res.statusCode),
       ip: req.ip || req.socket?.remoteAddress,
       userAgent: req.headers["user-agent"] || ""
     });
   });
   next();
 });
+
+function isNoisePath(pathName) {
+  return pathName.startsWith("/css/")
+    || pathName.startsWith("/js/")
+    || pathName.startsWith("/favicon/")
+    || pathName === "/favicon.ico"
+    || pathName.startsWith("/.well-known/");
+}
+
+function shouldAuditRequest(req, statusCode) {
+  if (isNoisePath(req.path)) return false;
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return true;
+  return statusCode >= 400 && !["GET", "HEAD", "OPTIONS"].includes(req.method);
+}
+
+function auditAction(req) {
+  if (req.path === "/login" && req.method === "POST") return "login";
+  if (req.path === "/logout" && req.method === "POST") return "logout";
+  if (req.path.startsWith("/buildings")) return "edificio";
+  if (req.path.startsWith("/occupants")) return "ocupante";
+  if (req.path.startsWith("/receipts")) return "recibo";
+  if (req.path.startsWith("/allocations")) return "prorrateo";
+  if (req.path.startsWith("/payments")) return "pago";
+  if (req.path.startsWith("/admin/users")) return "usuario";
+  if (req.path.startsWith("/admin/roles")) return "perfil";
+  return "transaccion";
+}
+
+function auditMessage(req, statusCode) {
+  const message = req.auditErrorMessage || req.auditMessage;
+  if (message) return String(message).slice(0, 500);
+  if (statusCode >= 400) return `Solicitud finalizada con estado HTTP ${statusCode}.`;
+  return null;
+}
 
 app.use(csrfProtection);
 app.use(express.static(path.join(rootDir, "public"), {
@@ -134,6 +193,7 @@ app.use((req, res) => {
 
 app.use((error, req, res, next) => {
   console.error(error);
+  req.auditErrorMessage = error?.message || "Error inesperado.";
   res.status(500).render("error", { title: "Error", message: "Ocurrió un error inesperado." });
 });
 
