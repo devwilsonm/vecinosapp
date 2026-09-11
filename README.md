@@ -1,137 +1,130 @@
 # VecinosApp
 
-Aplicación web en JavaScript para administrar ocupantes, recibos de servicios, prorrateos y pagos de un edificio.
+Aplicación web para administrar edificios, ocupantes, recibos, prorrateos y pagos.
 
-## Tecnología
+## Stack
 
-- Backend: Node.js + Express
-- Base de datos: SQLite
-- Vistas: EJS con HTML simple
-- Frontend: CSS propio y JavaScript simple
+- Backend: Node.js 24 + Express + TypeScript.
+- Arquitectura: capas de dominio, rutas, repositorios y adaptadores de infraestructura.
+- Base de datos: PostgreSQL en Supabase; SQLite queda disponible como respaldo local.
+- Vistas: EJS.
+- Frontend: TypeScript compilado a JavaScript, CSS propio.
 
-## Instalación
+El código fuente de la aplicación está en TypeScript. Los archivos `.js` que aparecen en `dist/` o que se generan en `public/js/` son artefactos compilados necesarios para ejecutar Node.js y el navegador.
+
+## Requisitos
+
+- Node.js 24 LTS y npm.
+- Una base PostgreSQL accesible mediante `DATABASE_URL` para trabajar con Supabase.
+
+## Variables de entorno
+
+Para desarrollo con Supabase configura `DATABASE_URL` y, si corresponde, `DATABASE_SSL=true`. También se recomienda definir:
+
+```text
+SESSION_SECRET=un-secreto-largo-y-aleatorio
+COOKIE_SECURE=false
+PORT=4000
+NODE_ENV=development
+```
+
+En Azure App Service las mismas variables se configuran en **Configuración > Variables de entorno**. Nunca guardes contraseñas, URLs con credenciales o secretos en el repositorio.
+
+## Instalación y desarrollo local
 
 ```powershell
 npm install
-```
-
-## Inicializar base de datos
-
-```powershell
-npm run init-db
-```
-
-## Cargar datos de prueba
-
-Incluye 6 ocupantes, 2 recibos, un prorrateo de agua y pagos parciales/completos.
-
-```powershell
-npm run seed-db
-```
-
-## Ejecutar
-
-```powershell
+npm run typecheck
 npm start
 ```
 
-Abre en el navegador:
+La aplicación queda disponible en `http://localhost:4000` cuando `PORT=4000` está definido. `npm start` compila primero `public/js/main.ts` y luego inicia el servidor con `tsx`.
 
-```text
-http://localhost:3000
+Para reiniciar automáticamente el servidor durante cambios:
+
+```powershell
+npm run dev
 ```
 
-Al inicializar la aplicación se crea un usuario administrador local si no existe:
+En Windows también puedes ejecutar `ejecutar-vecinosapp.bat`. Si `DATABASE_URL` existe, usa esa base PostgreSQL; si no existe, inicializa la base SQLite local.
+
+## Base de datos
+
+El servidor crea o valida el esquema al iniciar. Para usar una base SQLite de desarrollo sin `DATABASE_URL`:
+
+```powershell
+npm run init-db
+npm run seed-db
+```
+
+El usuario inicial de datos de prueba es:
 
 ```text
 Correo: admin@vecinosapp.local
 Contraseña: admin123
 ```
 
-Cambia esa contraseña antes de usar datos reales. En producción también conviene definir `SESSION_SECRET` con un valor propio. Si publicas la app con HTTPS, define `COOKIE_SECURE=true`.
+Cambia esa contraseña antes de usar datos reales. La base Supabase de São Paulo se utiliza para desarrollo local y la base Supabase de Ohio para producción.
 
 ## Build de producción
 
 ```powershell
+npm run typecheck
 npm run build
 npm run start:prod
 ```
 
-Para generar el build y levantarlo en el puerto 4000, ejecuta:
+El build se genera en `dist/`. Compila el backend y el navegador, copia las vistas y assets estáticos, y minifica CSS/JavaScript. Para generar el build y levantarlo en el puerto 4000 en Windows:
 
 ```powershell
 .\build-produccion-4000.bat
 ```
 
-El build se genera en `dist/` y minifica los archivos públicos CSS/JS.
+## Publicación en Azure App Service
 
-Para medir con Lighthouse usa este modo de producción; en desarrollo los assets se sirven sin cache largo para que puedas ver cambios de inmediato.
+La rama de publicación debe contener el código TypeScript y los archivos de configuración del repositorio. El flujo de GitHub Actions compila el proyecto y despliega el artefacto generado en `dist/`.
 
-## Seguridad y auditoría
+En el App Service configura como mínimo:
 
-- Las páginas internas requieren login.
-- Las mutaciones usan token CSRF.
-- Las cookies de sesión son `HttpOnly`, `SameSite=Lax` y pueden usar `Secure` con `COOKIE_SECURE=true`.
-- Las tablas principales guardan `created_by` y/o `updated_by` según corresponda.
-- Los logs de peticiones se guardan en una base SQLite separada: `instance/vecinosapp_logs.sqlite`.
-- La base principal continúa en `instance/vecinosapp.sqlite`.
+- `DATABASE_URL`: cadena de conexión de Supabase de producción.
+- `DATABASE_SSL=true`.
+- `SESSION_SECRET`: secreto largo y aleatorio.
+- `NODE_ENV=production`.
+- `COOKIE_SECURE=true`.
+- `PORT`: Azure puede asignarlo automáticamente; no es necesario fijarlo en producción.
 
-## Usuarios, perfiles y permisos
+No publiques el `.env`, la base SQLite local ni secretos en GitHub.
 
-VecinosApp usa perfiles para definir qué puede hacer cada usuario. Un perfil es un conjunto de permisos. Un usuario tiene un perfil y, cuando corresponde, edificios asignados.
+## Estructura principal
 
-### Roles o perfiles incluidos
-
-| Perfil | Para qué sirve | Uso recomendado |
-| --- | --- | --- |
-| Super Admin | Tiene acceso total al sistema, incluyendo usuarios, perfiles, permisos y mantenimiento. | Para la persona responsable de configurar y administrar toda la aplicación. Debe usarse con cuidado. |
-| Administrador | Gestiona la operación diaria: edificios, ocupantes, recibos, prorrateos, pagos y reportes. | Para personal administrativo interno que maneja varios edificios, pero no debería cambiar permisos críticos. |
-| Propietario | Pensado para dueños o responsables de uno o más edificios asignados. | Para que un propietario administre sus edificios, pisos, ocupantes, recibos, pagos y reportes sin ver edificios de otros propietarios. |
-| Operador | Perfil limitado para registrar información operativa. | Para usuarios que registran pagos u ocupantes, pero no deben tocar configuración general. |
-
-### Permisos disponibles
-
-| Permiso | Qué permite hacer |
-| --- | --- |
-| `dashboard.view` | Ver el Dashboard principal. |
-| `buildings.manage` | Crear, editar, desactivar y consultar edificios. |
-| `occupants.manage` | Crear, editar, desactivar y consultar ocupantes. |
-| `receipts.manage` | Registrar, editar, consultar o eliminar recibos cuando aplique. |
-| `allocations.manage` | Generar o recalcular prorrateos de recibos. |
-| `payments.manage` | Registrar pagos parciales o totales. |
-| `reports.view` | Consultar reportes de deudas, pagos, recibos y saldos. |
-| `users.manage` | Crear y editar usuarios. |
-| `roles.manage` | Crear y editar perfiles, incluyendo sus permisos. |
-| `maintenance.manage` | Acceder a opciones de mantenimiento del sistema. |
-
-### Recomendaciones de configuración
-
-- Usa `Super Admin` solo para usuarios de confianza que deban configurar todo el sistema.
-- Usa `Administrador` para personal que maneja la operación completa, pero no necesita modificar perfiles ni permisos.
-- Usa `Propietario` cuando una persona debe gestionar solo sus edificios asignados.
-- Usa `Operador` para tareas puntuales como registrar pagos u ocupantes.
-- Asigna edificios a usuarios propietarios para preparar la separación de información por edificio.
-- Revisa los permisos de un perfil antes de asignarlo a muchos usuarios.
-- Desactiva usuarios que ya no deben ingresar, en lugar de reutilizar sus cuentas.
-
-## Revisión de código
-
-El perfil del agente revisor está en `docs/code-review-agent.md`. Antes de cerrar cambios importantes ejecuta:
-
-```powershell
-npm run review
+```text
+src/
+  domain/                         Interfaces de repositorio y puertos.
+  infrastructure/database/       Adaptadores PostgreSQL/SQLite y logs.
+  infrastructure/repositories/   Implementaciones SQL de los repositorios.
+  routes/                         Entrada HTTP y coordinación de casos de uso.
+  utils/                          Seguridad, validación, cache y utilidades.
+public/js/main.ts                 Código fuente TypeScript del navegador.
+scripts/                          Build, migraciones, seed y revisión.
+views/                            Plantillas EJS.
 ```
 
-Este comando valida sintaxis, build, auditoría básica, controles de seguridad, cache/performance y `npm audit --omit=dev`.
+## Seguridad y rendimiento
 
-## Módulos
+- Las páginas internas requieren autenticación.
+- Las mutaciones usan protección CSRF y límite de solicitudes.
+- Las cookies de sesión son `HttpOnly`, `SameSite=Lax` y pueden usar `Secure`.
+- Las páginas cacheadas se separan por usuario y las mutaciones invalidan el cache correspondiente.
+- Los assets de producción usan cache HTTP y una versión generada por build.
+- La aplicación y la base de datos deben estar en regiones cercanas; si se mantienen en regiones distintas, evita cachear HTML personalizado y prioriza cachear únicamente assets públicos.
 
-- Dashboard con resumen general.
-- CRUD de edificios y vista de ocupantes agrupados por piso.
-- CRUD de ocupantes.
-- CRUD de recibos.
-- Prorrateo de recibos entre ocupantes activos.
-- Registro de pagos parciales o totales.
-- Reportes básicos de deudas, recibos pendientes, pagos por periodo, recaudación y saldos.
-- Administración para Super Admin: usuarios, perfiles, permisos y mantenimiento.
-- Asignación de edificios por usuario, preparada para propietarios/dueños de edificio.
+## Revisión antes de publicar
+
+```powershell
+npm run typecheck
+npm run build
+npm run review
+git diff --check
+```
+
+`npm run review` ejecuta controles de sintaxis, seguridad, columnas de auditoría, rendimiento, instalación limpia, build y auditoría de dependencias.

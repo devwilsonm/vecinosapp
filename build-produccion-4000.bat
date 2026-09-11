@@ -7,7 +7,7 @@ echo Generando build de produccion de VecinosApp...
 
 if not exist "node_modules" (
   echo Instalando dependencias...
-  call npm install
+  call npm.cmd install
   if errorlevel 1 (
     echo No se pudieron instalar las dependencias.
     pause
@@ -15,7 +15,7 @@ if not exist "node_modules" (
   )
 )
 
-call npm run build
+call npm.cmd run build
 if errorlevel 1 (
   echo No se pudo generar el build de produccion.
   pause
@@ -41,6 +41,6 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":4000" ^| findstr "LISTENING
 )
 
 echo Levantando VecinosApp en produccion: http://localhost:4000
-call npm run start:prod
+call npm.cmd run start:prod
 
 pause

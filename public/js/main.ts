@@ -1,3 +1,6 @@
+// Browser script migrated from JavaScript; DOM typing is kept permissive while the UI is incrementally typed.
+// @ts-nocheck
+
 document.querySelectorAll(".confirmable").forEach((form) => {
   form.addEventListener("submit", (event) => {
     const message = form.dataset.confirm || "¿Confirmar acción?";

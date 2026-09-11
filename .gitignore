@@ -1,6 +1,7 @@
 node_modules/
 dist/
 instance/
+public/js/*.js
 
 .env
 .env.*

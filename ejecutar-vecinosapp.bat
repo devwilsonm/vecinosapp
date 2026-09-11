@@ -7,7 +7,7 @@ echo Iniciando VecinosApp en http://localhost:4000
 
 if not exist "node_modules" (
   echo Instalando dependencias...
-  call npm install
+  call npm.cmd install
   if errorlevel 1 (
     echo No se pudieron instalar las dependencias.
     pause
@@ -15,9 +15,14 @@ if not exist "node_modules" (
   )
 )
 
-if not exist "instance\vecinosapp.sqlite" (
+set "NODE_ENV=development"
+set "PORT=4000"
+
+if defined DATABASE_URL (
+  echo Usando la base PostgreSQL configurada en DATABASE_URL.
+) else if not exist "instance\vecinosapp.sqlite" (
   echo Inicializando base de datos...
-  call npm run init-db
+  call npm.cmd run init-db
   if errorlevel 1 (
     echo No se pudo inicializar la base de datos.
     pause
@@ -25,7 +30,6 @@ if not exist "instance\vecinosapp.sqlite" (
   )
 )
 
-set PORT=4000
-call npm start
+call npm.cmd start
 
 pause

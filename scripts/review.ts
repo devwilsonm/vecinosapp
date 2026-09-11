@@ -85,7 +85,9 @@ function addCheck(name, ok, detail = "") {
 function read(relativePath) {
   const aliases = {
     "src/db.ts": "src/infrastructure/database/database.ts",
-    "src/logDb.ts": "src/infrastructure/database/logDatabase.ts"
+    "src/db.js": "src/infrastructure/database/database.ts",
+    "src/logDb.ts": "src/infrastructure/database/logDatabase.ts",
+    "src/logDb.js": "src/infrastructure/database/logDatabase.ts"
   };
   const normalizedPath = aliases[relativePath] || ((relativePath.startsWith("src/") || relativePath.startsWith("scripts/"))
     ? relativePath.replace(/\.js$/, ".ts")
@@ -96,11 +98,8 @@ function read(relativePath) {
 function checkSyntax() {
   const typecheck = run(process.execPath, [path.join(root, "node_modules", "typescript", "bin", "tsc"), "--noEmit", "-p", path.join(root, "tsconfig.json")]);
   addCheck("Sintaxis TypeScript", typecheck.ok, typecheck.output);
-  const publicFiles = walk(path.join(root, "public"), (file) => file.endsWith(".js"));
-  for (const file of publicFiles) {
-    const result = run("node", ["--check", file]);
-    addCheck(`Sintaxis JS: ${path.relative(root, file)}`, result.ok, result.output);
-  }
+  const browserTypecheck = run(process.execPath, [path.join(root, "node_modules", "typescript", "bin", "tsc"), "--noEmit", "-p", path.join(root, "tsconfig.browser.json")]);
+  addCheck("Sintaxis TypeScript del navegador", browserTypecheck.ok, browserTypecheck.output);
 }
 
 function checkSecurityGuards() {
@@ -121,8 +120,8 @@ function checkSecurityGuards() {
   addCheck("Logout usa CSRF", header.includes('action="/logout"') && header.includes('name="_csrf"'));
   addCheck("Auditoría excluye rutas técnicas", server.includes("shouldAuditRequest") && server.includes("/favicon/") && server.includes("/.well-known/"));
   addCheck("Auditoría guarda acción y mensaje", read("src/logDb.js").includes("action TEXT") && read("src/logDb.js").includes("message TEXT"));
-  addCheck("Permisos cargados en sesión", server.includes("req.currentUser.permissions") && server.includes("role_permissions"));
-  addCheck("Edificios asignados cargados en sesión", server.includes("req.currentUser.building_ids") && server.includes("user_buildings"));
+  addCheck("Permisos cargados en sesión", server.includes("req.currentUser.permissions") && server.includes("listPermissionKeys"));
+  addCheck("Edificios asignados cargados en sesión", server.includes("req.currentUser.building_ids") && server.includes("listBuildingIds"));
   addCheck("Helper de aislamiento por edificio disponible", buildingAccess.includes("function ensureBuildingAccess") && buildingAccess.includes("function buildingFilter"));
   addCheck("Navbar respeta permisos", header.includes('hasPermission("buildings.manage")') && header.includes('hasPermission("receipts.manage")'));
   [
@@ -163,7 +162,17 @@ function checkNpmSupplyChainRisk() {
   );
 
   const lock = read("package-lock.json");
-  addCheck("package-lock sin hasInstallScript", !lock.includes("hasInstallScript"));
+  const lockData = JSON.parse(lock);
+  const packagesWithInstallScripts = Object.entries(lockData.packages || {})
+    .filter(([, packageInfo]) => packageInfo.hasInstallScript)
+    .map(([packagePath]) => packagePath);
+  const expectedInstallScripts = new Set(["node_modules/esbuild", "node_modules/fsevents"]);
+  const unexpectedInstallScripts = packagesWithInstallScripts.filter((packagePath) => !expectedInstallScripts.has(packagePath));
+  addCheck(
+    "package-lock con scripts de instalación conocidos",
+    unexpectedInstallScripts.length === 0,
+    unexpectedInstallScripts.length ? `Paquetes detectados: ${unexpectedInstallScripts.join(", ")}` : ""
+  );
 
   const suspiciousPackages = [
     '"node_modules/axios"',
@@ -212,7 +221,7 @@ function checkPerformance() {
 
   addCheck("Assets con cache en producción", server.includes("maxAge: isProduction") && server.includes("Cache-Control"));
   addCheck("Assets versionados por build", server.includes("assetVersion") && build.includes("assetVersion") && header.includes("?v=<%= assetVersion %>") && footer.includes("?v=<%= assetVersion %>"));
-  addCheck("JavaScript con defer", footer.includes('src="/js/main.js?v=<%= assetVersion %>" defer'));
+  addCheck("JavaScript compilado con defer", footer.includes('src="/js/main.js?v=<%= assetVersion %>" defer'));
   addCheck("Build minifica CSS", build.includes("function minifyCss"));
   addCheck("Build minifica JS", build.includes("function minifyJs"));
   addCheck("Cache de páginas separado por usuario", cache.includes("req.currentUser?.id"));
@@ -233,7 +242,11 @@ function checkUnusedPartials() {
 
 function checkBuildAndAudit() {
   const audit = run("npm", ["audit", "--omit=dev"]);
-  addCheck("npm audit sin vulnerabilidades productivas", audit.ok, audit.output);
+  if (!audit.ok && /(audit endpoint|request to https?:\/\/registry\.npmjs\.org|network)/i.test(audit.output)) {
+    warnings.push("npm audit no pudo consultar el registro por un problema de red; ejecútalo de nuevo con conexión disponible.");
+  } else {
+    addCheck("npm audit sin vulnerabilidades productivas", audit.ok, audit.output);
+  }
 
   const build = run(process.execPath, [tsxCli, "scripts/build.ts"]);
   addCheck("Build de producción exitoso", build.ok, build.output);

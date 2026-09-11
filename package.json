@@ -4,9 +4,12 @@
   "description": "Aplicación web para administrar recibos, prorrateos y pagos de un edificio.",
   "main": "src/server.ts",
   "scripts": {
+    "prestart": "npm run build:client",
     "start": "tsx src/server.ts",
     "start:prod": "node dist/src/server.js",
-    "dev": "tsx watch src/server.ts",
+    "dev": "npm run build:client && tsx watch src/server.ts",
+    "build:client": "tsc -p tsconfig.browser.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.browser.json",
     "build": "tsx scripts/build.ts",
     "review": "tsx scripts/review.ts",
     "clear-data": "tsx scripts/clear-data.ts",

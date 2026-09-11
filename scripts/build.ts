@@ -33,6 +33,17 @@ function copyDir(source, target) {
   }
 }
 
+function copyPublicAssets(source, target) {
+  ensureDir(target);
+  for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
+    if (entry.name === "js") continue;
+    const sourcePath = path.join(source, entry.name);
+    const targetPath = path.join(target, entry.name);
+    if (entry.isDirectory()) copyDir(sourcePath, targetPath);
+    else fs.copyFileSync(sourcePath, targetPath);
+  }
+}
+
 function minifyCss(css) {
   return css
     .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -53,7 +64,7 @@ function minifyJs(js) {
 function copyAndMinifyPublic() {
   const publicSource = path.join(root, "public");
   const publicTarget = path.join(dist, "public");
-  copyDir(publicSource, publicTarget);
+  copyPublicAssets(publicSource, publicTarget);
 
   const cssDir = path.join(publicTarget, "css");
   if (fs.existsSync(cssDir)) {
@@ -98,6 +109,17 @@ for (const dir of copyDirs) {
 
 copyAndMinifyPublic();
 
+execFileSync(process.execPath, [
+  path.join(root, "node_modules", "typescript", "bin", "tsc"),
+  "-p",
+  path.join(root, "tsconfig.browser.build.json")
+], { stdio: "inherit" });
+
+const browserJsPath = path.join(dist, "public", "js", "main.js");
+if (fs.existsSync(browserJsPath)) {
+  fs.writeFileSync(browserJsPath, minifyJs(fs.readFileSync(browserJsPath, "utf8")));
+}
+
 for (const file of copyFiles) {
   const source = path.join(root, file);
   if (fs.existsSync(source)) fs.copyFileSync(source, path.join(dist, file));
@@ -106,6 +128,7 @@ for (const file of copyFiles) {
 const distPackagePath = path.join(dist, "package.json");
 const distPackage = JSON.parse(fs.readFileSync(distPackagePath, "utf8"));
 distPackage.scripts.start = "node src/server.js";
+delete distPackage.scripts.prestart;
 fs.writeFileSync(distPackagePath, JSON.stringify(distPackage, null, 2));
 
 ensureDir(path.join(dist, "instance"));
