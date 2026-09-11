@@ -158,6 +158,9 @@ function auditMessage(req, statusCode) {
 }
 
 app.use(csrfProtection);
+app.get("/favicon.ico", (req, res) => {
+  res.type("image/webp").sendFile(path.join(rootDir, "public", "favicon", "favicon-32x32.webp"));
+});
 app.use("/favicon", express.static(path.join(rootDir, "public", "favicon"), {
   setHeaders(res, filePath) {
     if (filePath.endsWith(".webp")) res.setHeader("Content-Type", "image/webp");
