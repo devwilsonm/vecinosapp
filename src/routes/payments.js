@@ -14,6 +14,14 @@ function redirectWith(res, url, message, type = "success") {
   res.redirect(`${url}?message=${encodeURIComponent(message)}&type=${type}`);
 }
 
+function todayForInput() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 router.get("/", (req, res) => {
   const requestedBuildingId = Number(req.query.building_id) || 0;
   const buildings = activeBuildingsForUser(db, req.currentUser, requestedBuildingId);
@@ -66,7 +74,11 @@ router.get("/new/:allocationId", (req, res) => {
   `).get(req.params.allocationId);
   if (!allocation) return res.status(404).render("error", { title: "No encontrado", message: "Deuda no encontrada." });
   if (!ensureBuildingAccess(req, res, allocation.building_id)) return;
-  res.render("payments/form", { allocation, errors: [] });
+  res.render("payments/form", {
+    allocation,
+    errors: [],
+    formData: { amount: (allocation.balance_cents / 100).toFixed(2), payment_date: todayForInput() }
+  });
 });
 
 router.post("/new/:allocationId", (req, res) => {
@@ -92,7 +104,7 @@ router.post("/new/:allocationId", (req, res) => {
   if (!req.body.payment_date || !isDate(req.body.payment_date)) errors.push("La fecha de pago es obligatoria y debe ser válida.");
   if (!["efectivo", "transferencia", "yape/plin", "otro"].includes(req.body.payment_method)) errors.push("El método de pago es obligatorio.");
 
-  if (errors.length) return res.status(400).render("payments/form", { allocation, errors });
+  if (errors.length) return res.status(400).render("payments/form", { allocation, errors, formData: req.body });
 
   db.prepare(`
     INSERT INTO payments (allocation_id, amount_cents, payment_date, payment_method, note, created_by)

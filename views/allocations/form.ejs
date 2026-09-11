@@ -31,6 +31,10 @@
     </div>
   </div>
   <h2>Ocupantes activos</h2>
+  <div class="allocation-selection-toolbar wide">
+    <label class="check"><input class="allocation-select-all" type="checkbox"> Seleccionar todos los ocupantes</label>
+    <span>También puedes seleccionar ocupantes por piso.</span>
+  </div>
   <% if (receipt.consumption_total_milli > 0) { %>
     <div class="allocation-summary wide">
       <span>Consumo asignado: <strong id="allocationConsumptionSum">0</strong> <%= receipt.consumption_unit || "" %></span>
@@ -43,6 +47,7 @@
           <summary>
             <span class="floor-title">Piso <%= floor.floor %></span>
             <span class="floor-meta"><%= floor.occupants.length %> ocupante<%= floor.occupants.length === 1 ? "" : "s" %></span>
+            <label class="check floor-select-control"><input class="floor-select-all" type="checkbox"> Todos</label>
           </summary>
           <table class="compact-table">
             <thead>
@@ -81,9 +86,20 @@
       <% }) %>
     </div>
   <% } else { %>
-    <div class="check-grid">
-      <% occupants.forEach((occupant) => { %>
-        <label class="check item"><input type="checkbox" name="occupant_ids" value="<%= occupant.id %>" <%= selectedIds.has(occupant.id) ? "checked" : "" %>> <%= occupant.full_name %> · Piso <%= occupant.floor %> · <%= occupant.unit %></label>
+    <div class="accordion-list wide allocation-selection-list">
+      <% occupantsByFloor.forEach((floor, floorIndex) => { %>
+        <details class="floor-accordion allocation-floor-selection" <%= floorIndex === 0 ? "open" : "" %>>
+          <summary>
+            <span class="floor-title">Piso <%= floor.floor %></span>
+            <span class="floor-meta"><%= floor.occupants.length %> ocupante<%= floor.occupants.length === 1 ? "" : "s" %></span>
+            <label class="check floor-select-control"><input class="floor-select-all" type="checkbox"> Todos</label>
+          </summary>
+          <div class="check-grid">
+            <% floor.occupants.forEach((occupant) => { %>
+              <label class="check item"><input class="allocation-check" type="checkbox" name="occupant_ids" value="<%= occupant.id %>" <%= selectedIds.has(occupant.id) ? "checked" : "" %>> <%= occupant.full_name %> · <%= occupant.unit %></label>
+            <% }) %>
+          </div>
+        </details>
       <% }) %>
     </div>
   <% } %>
@@ -93,7 +109,8 @@
   <div class="form-actions"><button class="button" type="submit">Generar prorrateo</button><a href="/receipts/<%= receipt.id %>">Volver</a></div>
 </form>
 <% if (existing.length) { %>
-  <h2>Prorrateo actual</h2>
+  <div id="allocationCurrentView" class="allocation-share-view">
+  <div class="section-head"><h2>Prorrateo actual</h2></div>
   <div class="accordion-list">
     <% existingByFloor.forEach((floor, index) => { %>
       <details class="floor-accordion" <%= index === 0 ? "open" : "" %>>
@@ -124,6 +141,15 @@
         </table>
       </details>
       <% }) %>
+  </div>
+  </div>
+  <div class="share-toolbar" data-share-path="<%= sharePath %>" data-share-title="Estado del prorrateo <%= receipt.receipt_number %>">
+    <a class="button" href="<%= sharePath %>" target="_blank" rel="noopener">Vista pública</a>
+    <button class="button secondary" type="button" data-copy-share>Copiar enlace</button>
+    <button class="button secondary" type="button" data-share-native>Compartir</button>
+    <button class="button secondary" type="button" data-share-whatsapp>WhatsApp</button>
+    <button class="button secondary" type="button" data-capture-target="allocationCurrentView">Capturar y compartir</button>
+    <span class="share-status" data-share-status role="status" aria-live="polite"></span>
   </div>
 <% } %>
 <%- include("../partials/footer") %>

@@ -183,6 +183,7 @@ if (allocationForm) {
   const amountSumLabel = document.querySelector("#allocationAmountSum");
 
   const amountText = (cents) => `S/ ${(Number(cents || 0) / 100).toFixed(2)}`;
+  const allocationChecks = () => Array.from(allocationForm.querySelectorAll(".allocation-check"));
 
   const selectedRows = () => Array.from(allocationForm.querySelectorAll(".allocation-table tbody tr"))
     .filter((row) => row.querySelector(".allocation-check")?.checked);
@@ -223,6 +224,31 @@ if (allocationForm) {
 
   const rowConsumptionMilli = (row) => Math.round(Number(row.querySelector(".allocation-consumption")?.value || 0) * 1000);
 
+  const resetUncheckedRow = (check) => {
+    const input = check.closest("tr")?.querySelector(".allocation-consumption");
+    if (input) {
+      input.value = "0";
+      input.dataset.touched = "";
+    }
+  };
+
+  const syncSelectionControls = () => {
+    const checks = allocationChecks();
+    const selectedCount = checks.filter((check) => check.checked).length;
+    const selectAll = allocationForm.querySelector(".allocation-select-all");
+    if (selectAll) {
+      selectAll.checked = checks.length > 0 && selectedCount === checks.length;
+      selectAll.indeterminate = selectedCount > 0 && selectedCount < checks.length;
+    }
+    allocationForm.querySelectorAll(".floor-select-all").forEach((floorSelect) => {
+      const floor = floorSelect.closest(".floor-accordion");
+      const floorChecks = Array.from(floor?.querySelectorAll(".allocation-check") || []);
+      const floorSelectedCount = floorChecks.filter((check) => check.checked).length;
+      floorSelect.checked = floorChecks.length > 0 && floorSelectedCount === floorChecks.length;
+      floorSelect.indeterminate = floorSelectedCount > 0 && floorSelectedCount < floorChecks.length;
+    });
+  };
+
   const distributeConsumption = () => {
     const method = currentMethod();
     const rows = method === "mixed"
@@ -245,14 +271,29 @@ if (allocationForm) {
 
   allocationForm.querySelectorAll(".allocation-check").forEach((check) => {
     check.addEventListener("change", () => {
-      const row = check.closest("tr");
-      const consumptionInput = row?.querySelector(".allocation-consumption");
-      if (!check.checked && consumptionInput) {
-        consumptionInput.value = "0";
-        consumptionInput.dataset.touched = "";
-      }
+      if (!check.checked) resetUncheckedRow(check);
       distributeConsumption();
       updateAllocationConsumption();
+    });
+  });
+
+  const applySelection = (checks, selected) => {
+    checks.forEach((check) => {
+      check.checked = selected;
+      if (!selected) resetUncheckedRow(check);
+    });
+    distributeConsumption();
+    updateAllocationConsumption();
+  };
+
+  allocationForm.querySelector(".allocation-select-all")?.addEventListener("change", (event) => {
+    applySelection(allocationChecks(), event.currentTarget.checked);
+  });
+  allocationForm.querySelectorAll(".floor-select-all").forEach((floorSelect) => {
+    floorSelect.closest(".floor-select-control")?.addEventListener("click", (event) => event.stopPropagation());
+    floorSelect.addEventListener("change", (event) => {
+      const floor = event.currentTarget.closest(".floor-accordion");
+      applySelection(Array.from(floor?.querySelectorAll(".allocation-check") || []), event.currentTarget.checked);
     });
   });
 
@@ -345,6 +386,7 @@ if (allocationForm) {
       diffLabel.classList.toggle("danger-text", (method === "consumption" && Math.abs(diff) >= 0.0005) || (method === "mixed" && diff < 0));
     }
     if (amountSumLabel) amountSumLabel.textContent = amountText(amountSum);
+    syncSelectionControls();
   };
 
   allocationForm.querySelectorAll(".allocation-consumption").forEach((field) => {
@@ -368,3 +410,130 @@ if (allocationForm) {
   });
   updateAllocationConsumption();
 }
+
+function shareUrlFrom(element) {
+  const path = element.closest("[data-share-path]")?.dataset.sharePath;
+  return path ? new URL(path, window.location.origin).href : window.location.href;
+}
+
+function setShareStatus(element, message) {
+  const status = element.closest("[data-share-path]")?.querySelector("[data-share-status]");
+  if (status) status.textContent = message;
+}
+
+async function copyShareUrl(element) {
+  const url = shareUrlFrom(element);
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      const input = document.createElement("textarea");
+      input.value = url;
+      input.setAttribute("readonly", "");
+      input.style.position = "fixed";
+      input.style.opacity = "0";
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      input.remove();
+    }
+    setShareStatus(element, "Enlace copiado.");
+  } catch {
+    setShareStatus(element, "No se pudo copiar el enlace.");
+  }
+}
+
+document.querySelectorAll("[data-copy-share]").forEach((button) => {
+  button.addEventListener("click", () => copyShareUrl(button));
+});
+
+document.querySelectorAll("[data-share-native]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const url = shareUrlFrom(button);
+    const title = button.closest("[data-share-title]")?.dataset.shareTitle || "Estado del prorrateo";
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text: title, url });
+        setShareStatus(button, "Compartido.");
+      } catch (error) {
+        if (error?.name !== "AbortError") setShareStatus(button, "No se pudo compartir.");
+      }
+      return;
+    }
+    await copyShareUrl(button);
+  });
+});
+
+document.querySelectorAll("[data-share-whatsapp]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const url = shareUrlFrom(button);
+    const title = button.closest("[data-share-title]")?.dataset.shareTitle || "Estado del prorrateo";
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${title}: ${url}`)}`, "_blank", "noopener");
+  });
+});
+
+function stylesheetText() {
+  return Array.from(document.styleSheets).map((sheet) => {
+    try {
+      return Array.from(sheet.cssRules).map((rule) => rule.cssText).join("\n");
+    } catch {
+      return "";
+    }
+  }).join("\n");
+}
+
+function elementToPng(element) {
+  const width = Math.max(element.scrollWidth, element.clientWidth);
+  const height = element.scrollHeight;
+  const clone = element.cloneNode(true);
+  clone.style.width = `${width}px`;
+  const styles = stylesheetText().replace(/<\/style/gi, "<\\/style");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>${styles}</style>${clone.outerHTML}</div></foreignObject></svg>`;
+  const image = new Image();
+  const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+
+  return new Promise((resolve, reject) => {
+    image.onload = () => {
+      const scale = Math.min(window.devicePixelRatio || 1, 2);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(width * scale);
+      canvas.height = Math.ceil(height * scale);
+      const context = canvas.getContext("2d");
+      context.scale(scale, scale);
+      context.drawImage(image, 0, 0, width, height);
+      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("No se pudo crear la imagen.")), "image/png");
+    };
+    image.onerror = () => reject(new Error("No se pudo capturar la vista."));
+    image.src = svgUrl;
+  });
+}
+
+document.querySelectorAll("[data-capture-target]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const target = document.getElementById(button.dataset.captureTarget);
+    if (!target) return;
+    const title = button.closest("[data-share-title]")?.dataset.shareTitle || "Estado del prorrateo";
+    const fileName = `${title.toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "prorrateo"}.png`;
+    button.disabled = true;
+    setShareStatus(button, "Generando captura...");
+    try {
+      const blob = await elementToPng(target);
+      const file = new File([blob], fileName, { type: "image/png" });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title, files: [file] });
+        setShareStatus(button, "Captura compartida.");
+      } else {
+        const download = document.createElement("a");
+        download.href = URL.createObjectURL(blob);
+        download.download = fileName;
+        download.click();
+        URL.revokeObjectURL(download.href);
+        setShareStatus(button, "Captura descargada.");
+      }
+    } catch (error) {
+      if (error?.name !== "AbortError") setShareStatus(button, "No se pudo generar la captura.");
+    } finally {
+      button.disabled = false;
+    }
+  });
+});

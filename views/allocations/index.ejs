@@ -1,12 +1,12 @@
 <%- include("../partials/header", { title: "Prorrateos | VecinosApp" }) %>
 <section class="page-head"><h1>Prorrateos</h1></section>
-<table>
-  <thead><tr><th>Edificio</th><th>Recibo</th><th>Servicio</th><th>Periodo</th><th>Total</th><th>Asignaciones</th><th>Estado</th><th></th></tr></thead>
+<table class="mobile-cards">
+  <thead><tr><th>Edificio</th><th>Recibo</th><th>Servicio</th><th>Periodo</th><th>Total</th><th>Asignaciones</th><th>Estado</th><th>Acciones</th></tr></thead>
   <tbody>
     <% receipts.forEach((receipt) => { %>
       <tr>
-        <td><%= receipt.building_name || "-" %></td><td><%= receipt.receipt_number %></td><td><%= receipt.service_type %></td><td><%= receipt.period %></td><td>S/ <%= money(receipt.total_amount_cents) %></td>
-        <td><%= receipt.allocation_count %></td><td><span class="badge status-badge <%= statusClass(receipt.status) %>"><%= receipt.status %></span></td><td><a href="/allocations/receipt/<%= receipt.id %>">Gestionar</a></td>
+        <td data-label="Edificio"><%= receipt.building_name || "-" %></td><td data-label="Recibo"><%= receipt.receipt_number %></td><td data-label="Servicio"><%= receipt.service_type %></td><td data-label="Periodo"><%= receipt.period %></td><td data-label="Total">S/ <%= money(receipt.total_amount_cents) %></td>
+        <td data-label="Asignaciones"><%= receipt.allocation_count %></td><td data-label="Estado"><span class="badge status-badge <%= statusClass(receipt.status) %>"><%= receipt.status %></span></td><td class="actions" data-label="Acciones"><a href="/allocations/receipt/<%= receipt.id %>">Gestionar</a><% if (receipt.sharePath) { %><a href="<%= receipt.sharePath %>" target="_blank" rel="noopener">Vista pública</a><% } %></td>
       </tr>
     <% }) %>
     <% if (!receipts.length) { %><tr><td colspan="8">Sin recibos registrados.</td></tr><% } %>

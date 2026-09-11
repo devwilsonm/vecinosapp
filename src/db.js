@@ -175,6 +175,14 @@ async function initDb() {
       FOREIGN KEY(allocation_id) REFERENCES receipt_allocations(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS public_allocation_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      receipt_id INTEGER NOT NULL UNIQUE,
+      token TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(receipt_id) REFERENCES receipts(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       role_id INTEGER,
@@ -229,6 +237,7 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_allocations_receipt ON receipt_allocations(receipt_id);
     CREATE INDEX IF NOT EXISTS idx_allocations_occupant ON receipt_allocations(occupant_id);
     CREATE INDEX IF NOT EXISTS idx_payments_allocation ON payments(allocation_id);
+    CREATE INDEX IF NOT EXISTS idx_public_allocation_links_token ON public_allocation_links(token);
     CREATE INDEX IF NOT EXISTS idx_user_buildings_building ON user_buildings(building_id);
   `);
 

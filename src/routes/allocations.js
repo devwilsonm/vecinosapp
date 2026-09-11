@@ -1,4 +1,5 @@
 const express = require("express");
+const crypto = require("crypto");
 const { db } = require("../db");
 const { requirePermission } = require("../utils/access");
 const { buildingFilter, ensureBuildingAccess } = require("../utils/buildingAccess");
@@ -12,6 +13,16 @@ router.use(requirePermission("allocations.manage"));
 
 function redirectWith(res, url, message, type = "success") {
   res.redirect(`${url}?message=${encodeURIComponent(message)}&type=${type}`);
+}
+
+function publicSharePath(receiptId) {
+  let link = db.prepare("SELECT token FROM public_allocation_links WHERE receipt_id = ?").get(receiptId);
+  if (!link) {
+    const token = crypto.randomBytes(32).toString("hex");
+    db.prepare("INSERT INTO public_allocation_links (receipt_id, token) VALUES (?, ?)").run(receiptId, token);
+    link = { token };
+  }
+  return `/shared/allocations/${link.token}`;
 }
 
 function parseSelectedOccupants(value) {
@@ -111,7 +122,11 @@ function allocationFormData(receipt, state = {}) {
 }
 
 function renderAllocationForm(res, receipt, state = {}, status = 200) {
-  return res.status(status).render("allocations/form", allocationFormData(receipt, state));
+  const viewData = allocationFormData(receipt, state);
+  return res.status(status).render("allocations/form", {
+    ...viewData,
+    sharePath: viewData.existing.length ? publicSharePath(receipt.id) : null
+  });
 }
 
 router.get("/", (req, res) => {
@@ -125,6 +140,9 @@ router.get("/", (req, res) => {
     GROUP BY r.id
     ORDER BY r.created_at DESC
   `).all(...access.params);
+  receipts.forEach((receipt) => {
+    if (receipt.allocation_count > 0) receipt.sharePath = publicSharePath(receipt.id);
+  });
   res.render("allocations/index", { receipts });
 });
 

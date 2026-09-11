@@ -21,6 +21,7 @@ const buildingRoutes = require("./routes/buildings");
 const occupantRoutes = require("./routes/occupants");
 const receiptRoutes = require("./routes/receipts");
 const allocationRoutes = require("./routes/allocations");
+const sharedRoutes = require("./routes/shared");
 const paymentRoutes = require("./routes/payments");
 const reportRoutes = require("./routes/reports");
 
@@ -169,6 +170,7 @@ app.use(rateLimit({ max: 240, windowMs: 60_000 }));
 app.use(rateLimit({ max: 60, windowMs: 60_000, mutationsOnly: true }));
 
 app.use(authRoutes);
+app.use("/shared", sharedRoutes);
 
 app.use((req, res, next) => {
   if (req.currentUser) return next();

@@ -8,8 +8,8 @@
 </div>
 <form method="post" class="form">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-  <label>Monto pagado <input type="number" step="0.01" min="0.01" max="<%= money(allocation.balance_cents) %>" name="amount" required></label>
-  <label>Fecha de pago <input type="date" name="payment_date" required></label>
+  <label>Monto pagado <input type="number" step="0.01" min="0.01" max="<%= money(allocation.balance_cents) %>" name="amount" value="<%= formData.amount %>" required></label>
+  <label>Fecha de pago <input type="date" name="payment_date" value="<%= formData.payment_date %>" required></label>
   <label>Método de pago
     <select name="payment_method" required>
       <option value="">Seleccionar</option>
