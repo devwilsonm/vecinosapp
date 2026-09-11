@@ -7,6 +7,12 @@ const { cleanText } = require("../utils/validation");
 
 const router = express.Router();
 
+type OccupantGroup = {
+  total: number;
+  floors: Array<{ floor: string; occupants: Record<string, any>[]; active_count: number }>;
+  floorIndex: Map<string, { floor: string; occupants: Record<string, any>[]; active_count: number }>;
+};
+
 router.use(requirePermission("occupants.manage"));
 
 function redirectWith(res, url, message, type = "success") {
@@ -41,8 +47,8 @@ router.get("/", async (req, res) => {
     ${access.sql}
     ORDER BY o.is_active DESC, b.name, CAST(o.floor AS INTEGER), o.floor, o.unit, o.full_name
   `).all(...access.params);
-  const buildingIndex = new Map();
-  const groupedOccupants = occupants.reduce((groups, occupant) => {
+  const buildingIndex = new Map<string, OccupantGroup>();
+  const groupedOccupants = (occupants as Record<string, any>[]).reduce((groups: Record<string, OccupantGroup>, occupant) => {
     const key = occupant.building_name || "Sin edificio";
     let building = buildingIndex.get(key);
     if (!building) {

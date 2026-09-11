@@ -7,6 +7,28 @@ const { db, usePostgres } = require("./db");
 const logDatabasePath = process.env.LOG_DATABASE_PATH || path.join(dataDir, "instance", "vecinosapp_logs.sqlite");
 let logDatabase = null;
 
+type AuditFilters = {
+  email?: string;
+  method?: string;
+  statusCode?: string | number;
+  path?: string;
+  limit?: string | number;
+  offset?: string | number;
+};
+
+type ApiLogEntry = {
+  userId?: number;
+  userEmail?: string;
+  method: string;
+  path: string;
+  statusCode: number;
+  durationMs: number;
+  action?: string;
+  message?: string;
+  ip?: string;
+  userAgent?: string;
+};
+
 function saveLogDb() {
   if (!logDatabase) return;
   fs.mkdirSync(path.dirname(logDatabasePath), { recursive: true });
@@ -59,7 +81,7 @@ function baseAuditWhere() {
   ];
 }
 
-function auditFilters(filters = {}) {
+function auditFilters(filters: AuditFilters = {}) {
   const where = baseAuditWhere();
   const params = [];
   if (filters.email) { where.push("user_email LIKE ?"); params.push(`%${filters.email}%`); }
@@ -69,7 +91,7 @@ function auditFilters(filters = {}) {
   return { where, params };
 }
 
-async function writeApiLog(entry) {
+async function writeApiLog(entry: ApiLogEntry) {
   if (!usePostgres && !logDatabase) return;
   const params = [entry.userId || null, entry.userEmail || null, entry.method, entry.path, entry.statusCode, entry.durationMs, entry.action || null, entry.message || null, entry.ip || null, entry.userAgent || null];
   const sql = `INSERT INTO api_logs (user_id, user_email, method, path, status_code, duration_ms, action, message, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -78,7 +100,7 @@ async function writeApiLog(entry) {
   saveLogDb();
 }
 
-async function listApiLogs(filters = {}) {
+async function listApiLogs(filters: AuditFilters = {}) {
   if (!usePostgres && !logDatabase) return [];
   const { where, params } = auditFilters(filters);
   const limit = Math.min(Math.max(Number(filters.limit) || 50, 10), 100);
@@ -94,7 +116,7 @@ async function listApiLogs(filters = {}) {
   } finally { statement.free(); }
 }
 
-async function countApiLogs(filters = {}) {
+async function countApiLogs(filters: AuditFilters = {}) {
   if (!usePostgres && !logDatabase) return 0;
   const { where, params } = auditFilters(filters);
   if (usePostgres) return Number((await db.prepare(`SELECT COUNT(*) AS total FROM api_logs WHERE ${where.join(" AND ")}`).get(...params)).total || 0);

@@ -9,6 +9,15 @@ const { updateReceiptStatus } = require("../utils/status");
 
 const router = express.Router();
 
+type AllocationFormState = {
+  selectedIds?: number[];
+  allocationMethod?: string;
+  postedConsumptions?: Record<string, any>;
+  postedAllocationTypes?: Record<string, any>;
+  recalculate?: boolean;
+  errors?: string[];
+};
+
 router.use(requirePermission("allocations.manage"));
 
 function redirectWith(res, url, message, type = "success") {
@@ -51,7 +60,7 @@ function splitByConsumption(totalCents, consumptions) {
   });
 }
 
-async function allocationFormData(receipt, state = {}) {
+async function allocationFormData(receipt, state: AllocationFormState = {}) {
   const occupants = await db.prepare(`
     SELECT *
     FROM occupants
@@ -121,7 +130,7 @@ async function allocationFormData(receipt, state = {}) {
   };
 }
 
-async function renderAllocationForm(res, receipt, state = {}, status = 200) {
+async function renderAllocationForm(res, receipt, state: AllocationFormState = {}, status = 200) {
   const viewData = await allocationFormData(receipt, state);
   return res.status(status).render("allocations/form", {
     ...viewData,

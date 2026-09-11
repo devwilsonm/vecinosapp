@@ -1,10 +1,11 @@
 const fs = require("fs");
 const path = require("path");
+const { execFileSync } = require("child_process");
 
 const root = path.join(__dirname, "..");
 const dist = path.join(root, "dist");
 
-const copyDirs = ["src", "views"];
+const copyDirs = ["views"];
 const copyFiles = ["package.json", "package-lock.json", "README.md", "web.config"];
 
 function removeDir(target) {
@@ -89,6 +90,8 @@ function writeBuildInfo() {
 removeDir(dist);
 ensureDir(dist);
 
+execFileSync(process.execPath, [path.join(root, "node_modules", "typescript", "bin", "tsc"), "-p", path.join(root, "tsconfig.json")], { stdio: "inherit" });
+
 for (const dir of copyDirs) {
   copyDir(path.join(root, dir), path.join(dist, dir));
 }
@@ -99,6 +102,11 @@ for (const file of copyFiles) {
   const source = path.join(root, file);
   if (fs.existsSync(source)) fs.copyFileSync(source, path.join(dist, file));
 }
+
+const distPackagePath = path.join(dist, "package.json");
+const distPackage = JSON.parse(fs.readFileSync(distPackagePath, "utf8"));
+distPackage.scripts.start = "node src/server.js";
+fs.writeFileSync(distPackagePath, JSON.stringify(distPackage, null, 2));
 
 ensureDir(path.join(dist, "instance"));
 fs.writeFileSync(path.join(dist, "instance", ".gitkeep"), "");

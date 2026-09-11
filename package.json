@@ -4,15 +4,15 @@
   "description": "Aplicación web para administrar recibos, prorrateos y pagos de un edificio.",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "tsx src/server.ts",
     "start:prod": "node dist/src/server.js",
-    "dev": "node --watch src/server.js",
+    "dev": "tsx watch src/server.ts",
     "build": "node scripts/build.js",
-    "review": "node scripts/review.js",
-    "clear-data": "node scripts/clear-data.js",
-    "init-db": "node scripts/init-db.js",
-    "seed-db": "node scripts/seed-db.js",
-    "migrate-sqlite": "node scripts/migrate-sqlite-to-postgres.js"
+    "review": "tsx scripts/review.js",
+    "clear-data": "tsx scripts/clear-data.js",
+    "init-db": "tsx scripts/init-db.js",
+    "seed-db": "tsx scripts/seed-db.js",
+    "migrate-sqlite": "tsx scripts/migrate-sqlite-to-postgres.js"
   },
   "engines": {
     "node": "24.x"
@@ -20,9 +20,14 @@
   "dependencies": {
     "ejs": "^3.1.10",
     "express": "^4.21.2",
-    "method-override": "^3.0.0",
     "express-async-errors": "^3.1.1",
+    "method-override": "^3.0.0",
     "pg": "^8.16.3",
     "sql.js": "^1.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.4",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3"
   }
 }

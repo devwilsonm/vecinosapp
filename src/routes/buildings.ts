@@ -1,8 +1,8 @@
 const express = require("express");
-const { db } = require("../db");
 const { canAccessAllBuildings, requirePermission } = require("../utils/access");
-const { buildingFilter, ensureBuildingAccess } = require("../utils/buildingAccess");
+const { ensureBuildingAccess, permittedBuildingIds } = require("../utils/buildingAccess");
 const { cleanText } = require("../utils/validation");
+const { buildingRepository } = require("../infrastructure/container");
 
 const router = express.Router();
 
@@ -21,15 +21,7 @@ function validateBuilding(body) {
 }
 
 router.get("/", async (req, res) => {
-  const access = buildingFilter(req.currentUser, "b.id", "WHERE");
-  const buildings = await db.prepare(`
-    SELECT b.*, COUNT(o.id) AS occupant_count
-    FROM buildings b
-    LEFT JOIN occupants o ON b.id = o.building_id
-    ${access.sql}
-    GROUP BY b.id
-    ORDER BY b.is_active DESC, b.name
-  `).all(...access.params);
+  const buildings = await buildingRepository.listAccessible(req.currentUser.id, canAccessAllBuildings(req.currentUser), permittedBuildingIds(req.currentUser));
   res.render("buildings/index", { buildings });
 });
 
@@ -40,37 +32,21 @@ router.get("/new", (req, res) => {
 router.post("/", async (req, res) => {
   const { errors, floors } = validateBuilding(req.body);
   if (errors.length) return res.status(400).render("buildings/form", { title: "Nuevo edificio", building: req.body, errors });
-  const save = db.transaction(async () => {
-    const buildingId = (await db.prepare(`
-      INSERT INTO buildings (name, address, floors, notes, is_active, created_by, updated_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      cleanText(req.body.name, 120),
-      cleanText(req.body.address, 255),
-      floors,
-      cleanText(req.body.notes, 1000),
-      req.body.is_active ? 1 : 0,
-      req.currentUser.id,
-      req.currentUser.id
-    )).lastInsertRowid;
-    if (!canAccessAllBuildings(req.currentUser)) {
-      await db.prepare("INSERT INTO user_buildings (user_id, building_id) VALUES (?, ?)").run(req.currentUser.id, buildingId);
-    }
-  });
-  await save();
+  await buildingRepository.create({
+    name: cleanText(req.body.name, 120),
+    address: cleanText(req.body.address, 255),
+    floors,
+    notes: cleanText(req.body.notes, 1000),
+    is_active: req.body.is_active ? 1 : 0
+  }, req.currentUser.id, !canAccessAllBuildings(req.currentUser));
   redirectWith(res, "/buildings", "Edificio creado correctamente.");
 });
 
 router.get("/:id", async (req, res) => {
-  const building = await db.prepare("SELECT * FROM buildings WHERE id = ?").get(req.params.id);
+  const building = await buildingRepository.findById(req.params.id);
   if (!building) return res.status(404).render("error", { title: "No encontrado", message: "Edificio no encontrado." });
   if (!ensureBuildingAccess(req, res, building.id)) return;
-  const occupants = await db.prepare(`
-    SELECT *
-    FROM occupants
-    WHERE building_id = ?
-    ORDER BY CAST(floor AS INTEGER), floor, unit, full_name
-  `).all(req.params.id);
+  const occupants = await buildingRepository.listOccupants(req.params.id);
   const floors = Array.from({ length: building.floors }, (_, index) => String(index + 1));
   occupants.forEach((occupant) => {
     if (!floors.includes(String(occupant.floor))) floors.push(String(occupant.floor));
@@ -80,48 +56,42 @@ router.get("/:id", async (req, res) => {
 });
 
 router.get("/:id/edit", async (req, res) => {
-  const building = await db.prepare("SELECT * FROM buildings WHERE id = ?").get(req.params.id);
+  const building = await buildingRepository.findById(req.params.id);
   if (!building) return res.status(404).render("error", { title: "No encontrado", message: "Edificio no encontrado." });
   if (!ensureBuildingAccess(req, res, building.id)) return;
   res.render("buildings/form", { title: "Editar edificio", building, errors: [] });
 });
 
 router.put("/:id", async (req, res) => {
-  const building = await db.prepare("SELECT * FROM buildings WHERE id = ?").get(req.params.id);
+  const building = await buildingRepository.findById(req.params.id);
   if (!building) return res.status(404).render("error", { title: "No encontrado", message: "Edificio no encontrado." });
   if (!ensureBuildingAccess(req, res, building.id)) return;
   const { errors, floors } = validateBuilding(req.body);
   if (errors.length) return res.status(400).render("buildings/form", { title: "Editar edificio", building: { ...req.body, id: req.params.id }, errors });
-  await db.prepare(`
-    UPDATE buildings
-    SET name = ?, address = ?, floors = ?, notes = ?, is_active = ?, updated_by = ?
-    WHERE id = ?
-  `).run(
-    cleanText(req.body.name, 120),
-    cleanText(req.body.address, 255),
+  await buildingRepository.update(req.params.id, {
+    name: cleanText(req.body.name, 120),
+    address: cleanText(req.body.address, 255),
     floors,
-    cleanText(req.body.notes, 1000),
-    req.body.is_active ? 1 : 0,
-    req.currentUser.id,
-    req.params.id
-  );
+    notes: cleanText(req.body.notes, 1000),
+    is_active: req.body.is_active ? 1 : 0
+  }, req.currentUser.id);
   redirectWith(res, `/buildings/${req.params.id}`, "Edificio actualizado correctamente.");
 });
 
 router.post("/:id/deactivate", async (req, res) => {
   if (!ensureBuildingAccess(req, res, req.params.id)) return;
-  await db.prepare("UPDATE buildings SET is_active = 0, updated_by = ? WHERE id = ?").run(req.currentUser.id, req.params.id);
+  await buildingRepository.deactivate(req.params.id, req.currentUser.id);
   redirectWith(res, "/buildings", "Edificio desactivado.");
 });
 
 router.delete("/:id", async (req, res) => {
   if (!ensureBuildingAccess(req, res, req.params.id)) return;
-  const occupants = Number((await db.prepare("SELECT COUNT(*) AS total FROM occupants WHERE building_id = ?").get(req.params.id)).total);
+  const occupants = await buildingRepository.countOccupants(req.params.id);
   if (occupants > 0) {
-    await db.prepare("UPDATE buildings SET is_active = 0, updated_by = ? WHERE id = ?").run(req.currentUser.id, req.params.id);
+    await buildingRepository.deactivate(req.params.id, req.currentUser.id);
     return redirectWith(res, "/buildings", "El edificio tiene ocupantes; se desactivó en lugar de eliminar.", "warning");
   }
-  await db.prepare("DELETE FROM buildings WHERE id = ?").run(req.params.id);
+  await buildingRepository.remove(req.params.id);
   redirectWith(res, "/buildings", "Edificio eliminado.");
 });
 
