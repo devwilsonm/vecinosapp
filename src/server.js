@@ -158,6 +158,12 @@ function auditMessage(req, statusCode) {
 }
 
 app.use(csrfProtection);
+app.use("/favicon", express.static(path.join(rootDir, "public", "favicon"), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith(".webp")) res.setHeader("Content-Type", "image/webp");
+    if (filePath.endsWith(".webmanifest")) res.setHeader("Content-Type", "application/manifest+json");
+  }
+}));
 app.use(express.static(path.join(rootDir, "public"), {
   etag: true,
   maxAge: isProduction ? "1d" : 0,
