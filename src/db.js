@@ -281,4 +281,15 @@ async function initDb() {
   if (fallbackBuilding) await db.prepare("UPDATE receipts SET building_id = ? WHERE building_id IS NULL").run(fallbackBuilding.id);
 }
 
-module.exports = { db, initDb, openDb, usePostgres };
+async function closeDb() {
+  if (pgPool) {
+    await pgPool.end();
+    pgPool = null;
+  }
+  if (sqliteDatabase) {
+    sqliteDatabase.close();
+    sqliteDatabase = null;
+  }
+}
+
+module.exports = { closeDb, db, initDb, openDb, usePostgres };
