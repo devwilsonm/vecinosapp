@@ -1,6 +1,6 @@
 const express = require("express");
-const { db } = require("../db");
 const { clearSession, setSession, verifyPassword } = require("../utils/auth");
+const { userRepository } = require("../infrastructure/container");
 
 const router = express.Router();
 
@@ -13,7 +13,7 @@ router.post("/login", async (req, res) => {
   const email = String(req.body.email || "").trim().toLowerCase();
   const password = String(req.body.password || "");
   req.auditUserEmail = email;
-  const user = await db.prepare("SELECT * FROM users WHERE email = ? AND is_active = 1").get(email);
+  const user = await userRepository.findActiveByEmail(email);
   if (!user || !verifyPassword(password, user.password_hash)) {
     req.auditMessage = "Intento de login fallido.";
     return res.status(401).render("auth/login", { errors: ["Correo o contraseña incorrectos."] });

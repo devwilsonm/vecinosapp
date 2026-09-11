@@ -1,11 +1,10 @@
-const { db } = require("../../db");
 import type { DatabasePort } from "../../domain/ports/database";
 import type { BuildingInput, BuildingRepository } from "../../domain/buildings/buildingRepository";
 
 export class SqlBuildingRepository implements BuildingRepository {
   constructor(private readonly database: DatabasePort) {}
 
-  async listAccessible(userId: number, canAccessAll: boolean, buildingIds: number[]) {
+  async listAccessible(canAccessAll: boolean, buildingIds: number[]) {
     if (!canAccessAll && !buildingIds.length) return [];
     const filter = canAccessAll ? "" : ` WHERE b.id IN (${buildingIds.map(() => "?").join(",")})`;
     const params = canAccessAll ? [] : buildingIds;
@@ -17,6 +16,21 @@ export class SqlBuildingRepository implements BuildingRepository {
       GROUP BY b.id
       ORDER BY b.is_active DESC, b.name
     `).all(...params);
+  }
+
+  listActive(canAccessAll: boolean, buildingIds: number[], selectedId: number) {
+    if (!canAccessAll && !buildingIds.length) return Promise.resolve([]);
+    if (canAccessAll) return this.database.prepare("SELECT * FROM buildings WHERE is_active = 1 OR id = ? ORDER BY name").all(selectedId);
+    return this.database.prepare(`
+      SELECT * FROM buildings
+      WHERE id IN (${buildingIds.map(() => "?").join(",")})
+        AND (is_active = 1 OR id = ?)
+      ORDER BY name
+    `).all(...buildingIds, selectedId);
+  }
+
+  listAllActive() {
+    return this.database.prepare("SELECT * FROM buildings WHERE is_active = 1 ORDER BY name").all();
   }
 
   findById(id: number | string) {

@@ -1,5 +1,5 @@
-const { db, initDb, usePostgres } = require("../src/db");
-const { clearApiLogs, initLogDb } = require("../src/logDb");
+const { db, initDb, usePostgres } = require("../src/infrastructure/database/database");
+const { clearApiLogs, initLogDb } = require("../src/infrastructure/database/logDatabase");
 
 const tables = [
   "payments",

@@ -1,16 +1,10 @@
 const express = require("express");
-const { db } = require("../db");
+const { publicAllocationRepository } = require("../infrastructure/container");
 
 const router = express.Router();
 
 async function allocationsByFloor(receiptId) {
-  const allocations = await db.prepare(`
-    SELECT a.*, o.full_name, o.floor, o.unit
-    FROM receipt_allocations a
-    JOIN occupants o ON a.occupant_id = o.id
-    WHERE a.receipt_id = ?
-    ORDER BY CAST(o.floor AS INTEGER), o.floor, o.unit, o.full_name
-  `).all(receiptId);
+  const allocations = await publicAllocationRepository.listAllocations(receiptId);
   const floorIndex = new Map();
   return allocations.reduce((floors, allocation) => {
     const floorKey = allocation.floor || "Sin piso";
@@ -35,15 +29,10 @@ async function allocationsByFloor(receiptId) {
 }
 
 router.get("/allocations/:token", async (req, res) => {
-  const link = await db.prepare("SELECT receipt_id FROM public_allocation_links WHERE token = ?").get(req.params.token);
+  const link = await publicAllocationRepository.findLinkByToken(req.params.token);
   if (!link) return res.status(404).render("error", { title: "Enlace no válido", message: "El enlace público no existe o ya no está disponible." });
 
-  const receipt = await db.prepare(`
-    SELECT r.*, b.name AS building_name
-    FROM receipts r
-    LEFT JOIN buildings b ON r.building_id = b.id
-    WHERE r.id = ?
-  `).get(link.receipt_id);
+  const receipt = await publicAllocationRepository.findReceipt(link.receipt_id);
   if (!receipt) return res.status(404).render("error", { title: "No encontrado", message: "El prorrateo ya no está disponible." });
 
   res.setHeader("Cache-Control", "no-store");

@@ -21,7 +21,7 @@ function validateBuilding(body) {
 }
 
 router.get("/", async (req, res) => {
-  const buildings = await buildingRepository.listAccessible(req.currentUser.id, canAccessAllBuildings(req.currentUser), permittedBuildingIds(req.currentUser));
+  const buildings = await buildingRepository.listAccessible(canAccessAllBuildings(req.currentUser), permittedBuildingIds(req.currentUser));
   res.render("buildings/index", { buildings });
 });
 

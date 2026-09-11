@@ -1,7 +1,7 @@
 const express = require("express");
-const { db } = require("../db");
 const { requirePermission } = require("../utils/access");
-const { activeBuildingsForUser, hasBuildingAccess } = require("../utils/buildingAccess");
+const { hasBuildingAccess, permittedBuildingIds } = require("../utils/buildingAccess");
+const { buildingRepository, dashboardRepository } = require("../infrastructure/container");
 
 const router = express.Router();
 
@@ -20,47 +20,20 @@ function paidPercent(paidCents, assignedCents) {
 
 router.get("/", async (req, res) => {
   const requestedBuildingId = Number(req.query.building_id) || 0;
-  const buildings = await activeBuildingsForUser(db, req.currentUser, requestedBuildingId);
+  const buildings = await buildingRepository.listActive(req.currentUser.role_key === "super_admin" || req.currentUser.role_key === "admin", permittedBuildingIds(req.currentUser), requestedBuildingId);
   const selectedBuildingId = requestedBuildingId && hasBuildingAccess(req.currentUser, requestedBuildingId)
     ? requestedBuildingId
     : buildings[0]?.id || 0;
 
-  const totalOccupants = selectedBuildingId
-    ? Number((await db.prepare("SELECT COUNT(*) AS total FROM occupants WHERE building_id = ?").get(selectedBuildingId)).total)
-    : 0;
-  const totalReceipts = selectedBuildingId
-    ? Number((await db.prepare("SELECT COUNT(*) AS total FROM receipts WHERE building_id = ?").get(selectedBuildingId)).total)
-    : 0;
-  const pendingReceipts = selectedBuildingId
-    ? Number((await db.prepare("SELECT COUNT(*) AS total FROM receipts WHERE building_id = ? AND status != 'pagado'").get(selectedBuildingId)).total)
-    : 0;
-  const recentPayments = await db.prepare(`
-    SELECT p.*, o.full_name, r.receipt_number
-    FROM payments p
-    JOIN receipt_allocations a ON p.allocation_id = a.id
-    JOIN occupants o ON a.occupant_id = o.id
-    JOIN receipts r ON a.receipt_id = r.id
-    WHERE r.building_id = ?
-    ORDER BY p.payment_date DESC, p.id DESC
-    LIMIT 5
-  `).all(selectedBuildingId);
-  const debts = await db.prepare(`
-    SELECT
-      o.id,
-      o.full_name,
-      o.floor,
-      o.unit,
-      SUM(a.assigned_amount_cents) AS assigned_cents,
-      SUM(a.paid_amount_cents) AS paid_cents,
-      SUM(a.balance_cents) AS balance_cents
-    FROM occupants o
-    JOIN receipt_allocations a ON o.id = a.occupant_id
-    JOIN receipts r ON a.receipt_id = r.id
-    WHERE a.balance_cents > 0
-      AND r.building_id = ?
-    GROUP BY o.id
-    ORDER BY CAST(o.floor AS INTEGER), o.floor, o.unit, o.full_name
-  `).all(selectedBuildingId);
+  const [totalOccupants, totalReceipts, pendingReceipts, recentPayments, debts] = selectedBuildingId
+    ? await Promise.all([
+      dashboardRepository.countOccupants(selectedBuildingId),
+      dashboardRepository.countReceipts(selectedBuildingId),
+      dashboardRepository.countPendingReceipts(selectedBuildingId),
+      dashboardRepository.recentPayments(selectedBuildingId),
+      dashboardRepository.debts(selectedBuildingId)
+    ])
+    : [0, 0, 0, [], []];
   debts.forEach((debt) => {
     debt.assigned_cents = Number(debt.assigned_cents || 0);
     debt.paid_cents = Number(debt.paid_cents || 0);

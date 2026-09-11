@@ -3,8 +3,8 @@ const path = require("path");
 const { AsyncLocalStorage } = require("async_hooks");
 const initSqlJs = require("sql.js");
 const { Pool } = require("pg");
-const { databasePath } = require("./config");
-const { hashPassword } = require("./utils/auth");
+const { databasePath } = require("../../config");
+const { hashPassword } = require("../../utils/auth");
 
 const usePostgres = Boolean(process.env.DATABASE_URL);
 const transactionStorage = new AsyncLocalStorage();

@@ -16,21 +16,6 @@ function buildingFilter(user, columnName, prefix = "AND") {
   return { sql: ` ${prefix} ${columnName} IN (${ids.map(() => "?").join(",")})`, params: ids };
 }
 
-async function activeBuildingsForUser(db, user, selectedId = 0) {
-  if (canAccessAllBuildings(user)) {
-    return db.prepare("SELECT * FROM buildings WHERE is_active = 1 OR id = ? ORDER BY name").all(selectedId);
-  }
-  const ids = permittedBuildingIds(user);
-  if (!ids.length) return [];
-  return db.prepare(`
-    SELECT *
-    FROM buildings
-    WHERE id IN (${ids.map(() => "?").join(",")})
-      AND (is_active = 1 OR id = ?)
-    ORDER BY name
-  `).all(...ids, selectedId);
-}
-
 function ensureBuildingAccess(req, res, buildingId) {
   if (hasBuildingAccess(req.currentUser, buildingId)) return true;
   res.status(403).render("error", {
@@ -41,7 +26,6 @@ function ensureBuildingAccess(req, res, buildingId) {
 }
 
 module.exports = {
-  activeBuildingsForUser,
   buildingFilter,
   ensureBuildingAccess,
   hasBuildingAccess,

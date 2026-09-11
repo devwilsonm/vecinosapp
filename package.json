@@ -2,17 +2,17 @@
   "name": "vecinosapp",
   "version": "1.0.0",
   "description": "Aplicación web para administrar recibos, prorrateos y pagos de un edificio.",
-  "main": "src/server.js",
+  "main": "src/server.ts",
   "scripts": {
     "start": "tsx src/server.ts",
     "start:prod": "node dist/src/server.js",
     "dev": "tsx watch src/server.ts",
-    "build": "node scripts/build.js",
-    "review": "tsx scripts/review.js",
-    "clear-data": "tsx scripts/clear-data.js",
-    "init-db": "tsx scripts/init-db.js",
-    "seed-db": "tsx scripts/seed-db.js",
-    "migrate-sqlite": "tsx scripts/migrate-sqlite-to-postgres.js"
+    "build": "tsx scripts/build.ts",
+    "review": "tsx scripts/review.ts",
+    "clear-data": "tsx scripts/clear-data.ts",
+    "init-db": "tsx scripts/init-db.ts",
+    "seed-db": "tsx scripts/seed-db.ts",
+    "migrate-sqlite": "tsx scripts/migrate-sqlite-to-postgres.ts"
   },
   "engines": {
     "node": "24.x"

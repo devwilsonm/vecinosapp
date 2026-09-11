@@ -1,8 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const initSqlJs = require("sql.js");
-const { dataDir } = require("./config");
-const { db, usePostgres } = require("./db");
+const { dataDir } = require("../../config");
+const { db, usePostgres } = require("./database");
 
 const logDatabasePath = process.env.LOG_DATABASE_PATH || path.join(dataDir, "instance", "vecinosapp_logs.sqlite");
 let logDatabase = null;

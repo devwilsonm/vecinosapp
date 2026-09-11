@@ -4,8 +4,8 @@ const fs = require("fs");
 const methodOverride = require("method-override");
 const path = require("path");
 const { port, rootDir } = require("./config");
-const { db, initDb } = require("./db");
-const { initLogDb, writeApiLog } = require("./logDb");
+const { initDb } = require("./infrastructure/database/database");
+const { initLogDb, writeApiLog } = require("./infrastructure/database/logDatabase");
 const { invalidateCacheOnMutation, pageCache } = require("./utils/cache");
 const { formatMilliUnits } = require("./utils/consumption");
 const { formatCents } = require("./utils/money");
@@ -14,6 +14,7 @@ const { csrfProtection, securityHeaders } = require("./utils/security");
 const { statusClass } = require("./utils/view");
 const { readSession } = require("./utils/auth");
 const { hasPermission, isSuperAdmin } = require("./utils/access");
+const { userRepository } = require("./infrastructure/container");
 
 const authRoutes = require("./routes/auth");
 const adminRoutes = require("./routes/admin");
@@ -55,24 +56,12 @@ app.use(async (req, res, next) => {
 
 app.use(async (req, res, next) => {
   const session = readSession(req);
-  req.currentUser = session ? (await db.prepare(`
-    SELECT u.id, u.role_id, u.full_name, u.email, r.name AS role_name, r.key AS role_key
-    FROM users u
-    LEFT JOIN roles r ON u.role_id = r.id
-    WHERE u.id = ? AND u.is_active = 1
-  `).get(session.userId)) : null;
+  req.currentUser = session ? (await userRepository.findSessionUser(session.userId)) : null;
   if (req.currentUser) {
-    req.currentUser.permissions = (await db.prepare(`
-      SELECT p.key
-      FROM permissions p
-      JOIN role_permissions rp ON p.id = rp.permission_id
-      WHERE rp.role_id = ?
-    `).all(req.currentUser.role_id)).map((permission) => permission.key);
-    req.currentUser.building_ids = (await db.prepare(`
-      SELECT building_id
-      FROM user_buildings
-      WHERE user_id = ?
-    `).all(req.currentUser.id)).map((row) => Number(row.building_id));
+    [req.currentUser.permissions, req.currentUser.building_ids] = await Promise.all([
+      userRepository.listPermissionKeys(req.currentUser.role_id),
+      userRepository.listBuildingIds(req.currentUser.id)
+    ]);
   }
   res.locals.currentUser = req.currentUser;
   res.locals.isSuperAdmin = isSuperAdmin(req.currentUser);

@@ -1,6 +1,6 @@
-const { db, initDb } = require("../src/db");
+const { db, initDb } = require("../src/infrastructure/database/database");
 const { splitAmount } = require("../src/utils/money");
-const { updateAllocationStatus, updateReceiptStatus } = require("../src/utils/status");
+const { allocationRepository } = require("../src/infrastructure/container");
 
 const seed = db.transaction(async () => {
   await db.prepare("DELETE FROM payments").run();
@@ -53,9 +53,9 @@ const seed = db.transaction(async () => {
   await insertPayment.run(allocationIds[1], 2500, "2026-01-11", "efectivo", "Pago parcial");
   await insertPayment.run(allocationIds[2], 5000, "2026-01-12", "transferencia", "Pago completo");
 
-  for (const allocationId of allocationIds) await updateAllocationStatus(allocationId);
-  await updateReceiptStatus(waterId);
-  await updateReceiptStatus(electricityId);
+  for (const allocationId of allocationIds) await allocationRepository.updateAllocationStatus(allocationId);
+  await allocationRepository.updateReceiptStatus(waterId);
+  await allocationRepository.updateReceiptStatus(electricityId);
 });
 
 initDb().then(async () => {

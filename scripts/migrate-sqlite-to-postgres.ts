@@ -2,8 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const initSqlJs = require("sql.js");
 const { databasePath, dataDir } = require("../src/config");
-const { closeDb, db, initDb } = require("../src/db");
-const { initLogDb } = require("../src/logDb");
+const { closeDb, db, initDb } = require("../src/infrastructure/database/database");
+const { initLogDb } = require("../src/infrastructure/database/logDatabase");
 
 const logDatabasePath = process.env.LOG_DATABASE_PATH || path.join(dataDir, "instance", "vecinosapp_logs.sqlite");
 const tablesWithIds = ["buildings", "occupants", "roles", "permissions", "receipts", "receipt_allocations", "payments", "public_allocation_links", "users", "api_logs"];

@@ -7,7 +7,9 @@ export interface BuildingInput {
 }
 
 export interface BuildingRepository {
-  listAccessible(userId: number, canAccessAll: boolean, buildingIds: number[]): Promise<Record<string, any>[]>;
+  listAccessible(canAccessAll: boolean, buildingIds: number[]): Promise<Record<string, any>[]>;
+  listActive(canAccessAll: boolean, buildingIds: number[], selectedId: number): Promise<Record<string, any>[]>;
+  listAllActive(): Promise<Record<string, any>[]>;
   findById(id: number | string): Promise<Record<string, any> | undefined>;
   listOccupants(buildingId: number | string): Promise<Record<string, any>[]>;
   create(input: BuildingInput, actorId: number, assignToUser: boolean): Promise<number>;

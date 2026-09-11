@@ -4,6 +4,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const root = path.join(__dirname, "..");
+const tsxCli = require.resolve("tsx/cli");
 const checks = [];
 const warnings = [];
 
@@ -29,9 +30,9 @@ function checkCleanInstall() {
   const logDatabasePath = path.join(tempDir, "vecinosapp_logs.sqlite");
   const code = `
     (async () => {
-      await Promise.all([require('./src/db').initDb(), require('./src/logDb').initLogDb()]);
-        const { db } = require('./src/db');
-        const { listApiLogs } = require('./src/logDb');
+      await Promise.all([require('./src/infrastructure/database/database').initDb(), require('./src/infrastructure/database/logDatabase').initLogDb()]);
+        const { db } = require('./src/infrastructure/database/database');
+        const { listApiLogs } = require('./src/infrastructure/database/logDatabase');
         const required = {
           buildings: ['id','name','floors','created_by','updated_by'],
           occupants: ['id','building_id','full_name','document','floor','unit','created_by','updated_by'],
@@ -57,8 +58,8 @@ function checkCleanInstall() {
         if (!Array.isArray(await listApiLogs({ limit: 10 }))) throw new Error('BD de logs no inicializa correctamente');
     })().catch((error) => { console.error(error.message); process.exit(1); });
   `;
-  const result = run("node", ["-e", code], {
-    env: { DATABASE_PATH: databasePath, LOG_DATABASE_PATH: logDatabasePath }
+  const result = run(process.execPath, [tsxCli, "-e", code], {
+    env: { DATABASE_URL: "", DATABASE_PATH: databasePath, LOG_DATABASE_PATH: logDatabasePath }
   });
   addCheck("Instalación limpia crea esquema completo", result.ok, result.output);
   fs.rmSync(tempDir, { recursive: true, force: true });
@@ -82,28 +83,32 @@ function addCheck(name, ok, detail = "") {
 }
 
 function read(relativePath) {
-  return fs.readFileSync(path.join(root, relativePath), "utf8");
+  const aliases = {
+    "src/db.ts": "src/infrastructure/database/database.ts",
+    "src/logDb.ts": "src/infrastructure/database/logDatabase.ts"
+  };
+  const normalizedPath = aliases[relativePath] || ((relativePath.startsWith("src/") || relativePath.startsWith("scripts/"))
+    ? relativePath.replace(/\.js$/, ".ts")
+    : relativePath);
+  return fs.readFileSync(path.join(root, normalizedPath), "utf8");
 }
 
 function checkSyntax() {
-  const files = [
-    ...walk(path.join(root, "src"), (file) => file.endsWith(".js")),
-    ...walk(path.join(root, "scripts"), (file) => file.endsWith(".js")),
-    ...walk(path.join(root, "public"), (file) => file.endsWith(".js"))
-  ];
-
-  for (const file of files) {
+  const typecheck = run(process.execPath, [path.join(root, "node_modules", "typescript", "bin", "tsc"), "--noEmit", "-p", path.join(root, "tsconfig.json")]);
+  addCheck("Sintaxis TypeScript", typecheck.ok, typecheck.output);
+  const publicFiles = walk(path.join(root, "public"), (file) => file.endsWith(".js"));
+  for (const file of publicFiles) {
     const result = run("node", ["--check", file]);
     addCheck(`Sintaxis JS: ${path.relative(root, file)}`, result.ok, result.output);
   }
 }
 
 function checkSecurityGuards() {
-  const server = read("src/server.js");
-  const auth = read("src/utils/auth.js");
-  const security = read("src/utils/security.js");
+  const server = read("src/server.ts");
+  const auth = read("src/utils/auth.ts");
+  const security = read("src/utils/security.ts");
   const header = read("views/partials/header.ejs");
-  const buildingAccess = read("src/utils/buildingAccess.js");
+  const buildingAccess = read("src/utils/buildingAccess.ts");
 
   addCheck("Middleware de headers de seguridad activo", server.includes("app.use(securityHeaders)"));
   addCheck("Protección CSRF activa", server.includes("app.use(csrfProtection)") && security.includes("csrfProtection"));
@@ -121,25 +126,25 @@ function checkSecurityGuards() {
   addCheck("Helper de aislamiento por edificio disponible", buildingAccess.includes("function ensureBuildingAccess") && buildingAccess.includes("function buildingFilter"));
   addCheck("Navbar respeta permisos", header.includes('hasPermission("buildings.manage")') && header.includes('hasPermission("receipts.manage")'));
   [
-    ["src/routes/dashboard.js", "dashboard.view"],
-    ["src/routes/buildings.js", "buildings.manage"],
-    ["src/routes/occupants.js", "occupants.manage"],
-    ["src/routes/receipts.js", "receipts.manage"],
-    ["src/routes/allocations.js", "allocations.manage"],
-    ["src/routes/payments.js", "payments.manage"],
-    ["src/routes/reports.js", "reports.view"]
+    ["src/routes/dashboard.ts", "dashboard.view"],
+    ["src/routes/buildings.ts", "buildings.manage"],
+    ["src/routes/occupants.ts", "occupants.manage"],
+    ["src/routes/receipts.ts", "receipts.manage"],
+    ["src/routes/allocations.ts", "allocations.manage"],
+    ["src/routes/payments.ts", "payments.manage"],
+    ["src/routes/reports.ts", "reports.view"]
   ].forEach(([file, permission]) => {
     const content = read(file);
     addCheck(`Ruta protegida por permiso: ${file}`, content.includes(`requirePermission("${permission}")`));
   });
   [
-    "src/routes/dashboard.js",
-    "src/routes/buildings.js",
-    "src/routes/occupants.js",
-    "src/routes/receipts.js",
-    "src/routes/allocations.js",
-    "src/routes/payments.js",
-    "src/routes/reports.js"
+    "src/routes/dashboard.ts",
+    "src/routes/buildings.ts",
+    "src/routes/occupants.ts",
+    "src/routes/receipts.ts",
+    "src/routes/allocations.ts",
+    "src/routes/payments.ts",
+    "src/routes/reports.ts"
   ].forEach((file) => {
     const content = read(file);
     addCheck(`Ruta aislada por edificio: ${file}`, content.includes("buildingAccess") || content.includes("ensureBuildingAccess") || content.includes("buildingFilter") || content.includes("activeBuildingsForUser"));
@@ -179,13 +184,13 @@ function checkNpmSupplyChainRisk() {
 }
 
 function checkAuditColumns() {
-  const db = read("src/db.js");
+  const db = read("src/infrastructure/database/database.ts");
   const routeFiles = [
-    "src/routes/buildings.js",
-    "src/routes/occupants.js",
-    "src/routes/receipts.js",
-    "src/routes/allocations.js",
-    "src/routes/payments.js"
+    "src/routes/buildings.ts",
+    "src/routes/occupants.ts",
+    "src/routes/receipts.ts",
+    "src/routes/allocations.ts",
+    "src/routes/payments.ts"
   ];
 
   for (const table of ["buildings", "occupants", "receipts", "receipt_allocations", "payments"]) {
@@ -199,11 +204,11 @@ function checkAuditColumns() {
 }
 
 function checkPerformance() {
-  const server = read("src/server.js");
+  const server = read("src/server.ts");
   const header = read("views/partials/header.ejs");
   const footer = read("views/partials/footer.ejs");
-  const build = read("scripts/build.js");
-  const cache = read("src/utils/cache.js");
+  const build = read("scripts/build.ts");
+  const cache = read("src/utils/cache.ts");
 
   addCheck("Assets con cache en producción", server.includes("maxAge: isProduction") && server.includes("Cache-Control"));
   addCheck("Assets versionados por build", server.includes("assetVersion") && build.includes("assetVersion") && header.includes("?v=<%= assetVersion %>") && footer.includes("?v=<%= assetVersion %>"));
@@ -230,7 +235,7 @@ function checkBuildAndAudit() {
   const audit = run("npm", ["audit", "--omit=dev"]);
   addCheck("npm audit sin vulnerabilidades productivas", audit.ok, audit.output);
 
-  const build = run("node", ["scripts/build.js"]);
+  const build = run(process.execPath, [tsxCli, "scripts/build.ts"]);
   addCheck("Build de producción exitoso", build.ok, build.output);
 }
 
