@@ -5,7 +5,7 @@ const root = path.join(__dirname, "..");
 const dist = path.join(root, "dist");
 
 const copyDirs = ["src", "views"];
-const copyFiles = ["package.json", "package-lock.json", "README.md"];
+const copyFiles = ["package.json", "package-lock.json", "README.md", "web.config"];
 
 function removeDir(target) {
   if (!fs.existsSync(target)) return;
