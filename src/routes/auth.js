@@ -9,11 +9,11 @@ router.get("/login", (req, res) => {
   res.render("auth/login", { errors: [] });
 });
 
-router.post("/login", (req, res) => {
+router.post("/login", async (req, res) => {
   const email = String(req.body.email || "").trim().toLowerCase();
   const password = String(req.body.password || "");
   req.auditUserEmail = email;
-  const user = db.prepare("SELECT * FROM users WHERE email = ? AND is_active = 1").get(email);
+  const user = await db.prepare("SELECT * FROM users WHERE email = ? AND is_active = 1").get(email);
   if (!user || !verifyPassword(password, user.password_hash)) {
     req.auditMessage = "Intento de login fallido.";
     return res.status(401).render("auth/login", { errors: ["Correo o contraseña incorrectos."] });

@@ -22,13 +22,13 @@ function todayForInput() {
   return `${year}-${month}-${day}`;
 }
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const requestedBuildingId = Number(req.query.building_id) || 0;
-  const buildings = activeBuildingsForUser(db, req.currentUser, requestedBuildingId);
+  const buildings = await activeBuildingsForUser(db, req.currentUser, requestedBuildingId);
   const selectedBuildingId = requestedBuildingId && hasBuildingAccess(req.currentUser, requestedBuildingId)
     ? requestedBuildingId
     : buildings[0]?.id || 0;
-  const pendingAllocations = db.prepare(`
+  const pendingAllocations = await db.prepare(`
     SELECT a.*, o.full_name, o.floor, o.unit, r.receipt_number, r.period, b.name AS building_name
     FROM receipt_allocations a
     JOIN occupants o ON a.occupant_id = o.id
@@ -38,7 +38,7 @@ router.get("/", (req, res) => {
       AND r.building_id = ?
     ORDER BY CAST(o.floor AS INTEGER), o.floor, o.unit, o.full_name, r.due_date
   `).all(selectedBuildingId);
-  const payments = db.prepare(`
+  const payments = await db.prepare(`
     SELECT p.*, o.full_name, o.floor, o.unit, r.receipt_number, r.period, b.name AS building_name
     FROM payments p
     JOIN receipt_allocations a ON p.allocation_id = a.id
@@ -64,8 +64,8 @@ router.get("/", (req, res) => {
   });
 });
 
-router.get("/new/:allocationId", (req, res) => {
-  const allocation = db.prepare(`
+router.get("/new/:allocationId", async (req, res) => {
+  const allocation = await db.prepare(`
     SELECT a.*, o.full_name, r.receipt_number, r.period, r.id AS receipt_id, r.building_id
     FROM receipt_allocations a
     JOIN occupants o ON a.occupant_id = o.id
@@ -81,8 +81,8 @@ router.get("/new/:allocationId", (req, res) => {
   });
 });
 
-router.post("/new/:allocationId", (req, res) => {
-  const allocation = db.prepare(`
+router.post("/new/:allocationId", async (req, res) => {
+  const allocation = await db.prepare(`
     SELECT a.*, o.full_name, r.receipt_number, r.period, r.id AS receipt_id, r.building_id
     FROM receipt_allocations a
     JOIN occupants o ON a.occupant_id = o.id
@@ -106,14 +106,14 @@ router.post("/new/:allocationId", (req, res) => {
 
   if (errors.length) return res.status(400).render("payments/form", { allocation, errors, formData: req.body });
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO payments (allocation_id, amount_cents, payment_date, payment_method, note, created_by)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(allocation.id, amountCents, req.body.payment_date, req.body.payment_method, cleanText(req.body.note, 1000), req.currentUser.id);
-  updateAllocationStatus(allocation.id);
-  db.prepare("UPDATE receipt_allocations SET updated_by = ? WHERE id = ?").run(req.currentUser.id, allocation.id);
-  updateReceiptStatus(allocation.receipt_id);
-  db.prepare("UPDATE receipts SET updated_by = ? WHERE id = ?").run(req.currentUser.id, allocation.receipt_id);
+  await updateAllocationStatus(allocation.id);
+  await db.prepare("UPDATE receipt_allocations SET updated_by = ? WHERE id = ?").run(req.currentUser.id, allocation.id);
+  await updateReceiptStatus(allocation.receipt_id);
+  await db.prepare("UPDATE receipts SET updated_by = ? WHERE id = ?").run(req.currentUser.id, allocation.receipt_id);
   redirectWith(res, "/payments", "Pago registrado correctamente.");
 });
 

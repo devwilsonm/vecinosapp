@@ -18,23 +18,23 @@ function paidPercent(paidCents, assignedCents) {
   return Math.max(0, Math.min(100, Math.round((paidCents / assignedCents) * 100)));
 }
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const requestedBuildingId = Number(req.query.building_id) || 0;
-  const buildings = activeBuildingsForUser(db, req.currentUser, requestedBuildingId);
+  const buildings = await activeBuildingsForUser(db, req.currentUser, requestedBuildingId);
   const selectedBuildingId = requestedBuildingId && hasBuildingAccess(req.currentUser, requestedBuildingId)
     ? requestedBuildingId
     : buildings[0]?.id || 0;
 
   const totalOccupants = selectedBuildingId
-    ? db.prepare("SELECT COUNT(*) AS total FROM occupants WHERE building_id = ?").get(selectedBuildingId).total
+    ? Number((await db.prepare("SELECT COUNT(*) AS total FROM occupants WHERE building_id = ?").get(selectedBuildingId)).total)
     : 0;
   const totalReceipts = selectedBuildingId
-    ? db.prepare("SELECT COUNT(*) AS total FROM receipts WHERE building_id = ?").get(selectedBuildingId).total
+    ? Number((await db.prepare("SELECT COUNT(*) AS total FROM receipts WHERE building_id = ?").get(selectedBuildingId)).total)
     : 0;
   const pendingReceipts = selectedBuildingId
-    ? db.prepare("SELECT COUNT(*) AS total FROM receipts WHERE building_id = ? AND status != 'pagado'").get(selectedBuildingId).total
+    ? Number((await db.prepare("SELECT COUNT(*) AS total FROM receipts WHERE building_id = ? AND status != 'pagado'").get(selectedBuildingId)).total)
     : 0;
-  const recentPayments = db.prepare(`
+  const recentPayments = await db.prepare(`
     SELECT p.*, o.full_name, r.receipt_number
     FROM payments p
     JOIN receipt_allocations a ON p.allocation_id = a.id
@@ -44,7 +44,7 @@ router.get("/", (req, res) => {
     ORDER BY p.payment_date DESC, p.id DESC
     LIMIT 5
   `).all(selectedBuildingId);
-  const debts = db.prepare(`
+  const debts = await db.prepare(`
     SELECT
       o.id,
       o.full_name,
@@ -62,6 +62,9 @@ router.get("/", (req, res) => {
     ORDER BY CAST(o.floor AS INTEGER), o.floor, o.unit, o.full_name
   `).all(selectedBuildingId);
   debts.forEach((debt) => {
+    debt.assigned_cents = Number(debt.assigned_cents || 0);
+    debt.paid_cents = Number(debt.paid_cents || 0);
+    debt.balance_cents = Number(debt.balance_cents || 0);
     debt.paid_percent = paidPercent(debt.paid_cents, debt.assigned_cents);
     debt.percent_class = progressClass(debt.paid_percent);
   });

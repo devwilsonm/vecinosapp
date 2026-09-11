@@ -7,9 +7,9 @@ const router = express.Router();
 
 router.use(requirePermission("reports.view"));
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const access = buildingFilter(req.currentUser, "r.building_id");
-  const debtsByOccupant = db.prepare(`
+  const debtsByOccupant = await db.prepare(`
     SELECT o.full_name, o.floor, o.unit, SUM(a.balance_cents) AS balance_cents
     FROM occupants o
     JOIN receipt_allocations a ON o.id = a.occupant_id
@@ -29,17 +29,18 @@ router.get("/", (req, res) => {
       floors.push(group);
     }
     group.occupants.push(debt);
-    group.balance_cents += debt.balance_cents || 0;
+    debt.balance_cents = Number(debt.balance_cents || 0);
+    group.balance_cents += debt.balance_cents;
     return floors;
   }, []);
-  const pendingReceipts = db.prepare(`
+  const pendingReceipts = await db.prepare(`
     SELECT *
     FROM receipts r
     WHERE status != 'pagado'
       ${access.sql}
     ORDER BY due_date
   `).all(...access.params);
-  const paymentsByPeriod = db.prepare(`
+  const paymentsByPeriod = await db.prepare(`
     SELECT r.period, SUM(p.amount_cents) AS total_cents
     FROM payments p
     JOIN receipt_allocations a ON p.allocation_id = a.id
@@ -49,7 +50,7 @@ router.get("/", (req, res) => {
     GROUP BY r.period
     ORDER BY r.period
   `).all(...access.params);
-  const receiptTotals = db.prepare(`
+  const receiptTotals = await db.prepare(`
     SELECT r.*, COALESCE(SUM(a.paid_amount_cents), 0) AS collected_cents, COALESCE(SUM(a.balance_cents), 0) AS balance_cents
     FROM receipts r
     LEFT JOIN receipt_allocations a ON r.id = a.receipt_id

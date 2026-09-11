@@ -13,28 +13,28 @@ function redirectWith(res, url, message, type = "success") {
   res.redirect(`${url}?message=${encodeURIComponent(message)}&type=${type}`);
 }
 
-function activeBuildings(user, selectedId = 0) {
+async function activeBuildings(user, selectedId = 0) {
   return activeBuildingsForUser(db, user, selectedId);
 }
 
-function validateOccupant(body, user, id = 0) {
+async function validateOccupant(body, user, id = 0) {
   const errors = [];
   ["full_name", "document", "floor", "unit"].forEach((field) => {
     if (!String(body[field] || "").trim()) errors.push("Completa todos los campos obligatorios.");
   });
-  const building = db.prepare("SELECT id, floors FROM buildings WHERE id = ? AND is_active = 1").get(Number(body.building_id));
+  const building = await db.prepare("SELECT id, floors FROM buildings WHERE id = ? AND is_active = 1").get(Number(body.building_id));
   if (!building) errors.push("Selecciona un edificio activo.");
   if (building && !hasBuildingAccess(user, building.id)) errors.push("No tienes permisos para usar ese edificio.");
   const floor = Number(body.floor);
   if (building && (!Number.isInteger(floor) || floor < 1 || floor > building.floors)) errors.push("Selecciona un piso válido para el edificio.");
-  const duplicate = db.prepare("SELECT id FROM occupants WHERE document = ? AND id != ?").get(cleanText(body.document, 40), id);
+  const duplicate = await db.prepare("SELECT id FROM occupants WHERE document = ? AND id != ?").get(cleanText(body.document, 40), id);
   if (duplicate) errors.push("Ya existe un ocupante con ese documento.");
   return [...new Set(errors)];
 }
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const access = buildingFilter(req.currentUser, "o.building_id", "WHERE");
-  const occupants = db.prepare(`
+  const occupants = await db.prepare(`
     SELECT o.*, b.name AS building_name
     FROM occupants o
     LEFT JOIN buildings b ON o.building_id = b.id
@@ -68,7 +68,7 @@ router.get("/", (req, res) => {
   res.render("occupants/index", { groupedOccupants });
 });
 
-router.get("/new", (req, res) => {
+router.get("/new", async (req, res) => {
   res.render("occupants/form", {
     title: "Nuevo ocupante",
     occupant: {
@@ -77,22 +77,22 @@ router.get("/new", (req, res) => {
       floor: req.query.floor || "",
       return_to: req.query.return_to || ""
     },
-    buildings: activeBuildings(req.currentUser),
+    buildings: await activeBuildings(req.currentUser),
     errors: []
   });
 });
 
-router.post("/", (req, res) => {
-  const errors = validateOccupant(req.body, req.currentUser);
+router.post("/", async (req, res) => {
+  const errors = await validateOccupant(req.body, req.currentUser);
   if (errors.length) {
     return res.status(400).render("occupants/form", {
       title: "Nuevo ocupante",
       occupant: req.body,
-      buildings: activeBuildings(req.currentUser, Number(req.body.building_id)),
+      buildings: await activeBuildings(req.currentUser, Number(req.body.building_id)),
       errors
     });
   }
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO occupants (building_id, full_name, document, phone, email, floor, unit, is_active, created_by, updated_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
@@ -110,8 +110,8 @@ router.post("/", (req, res) => {
   redirectWith(res, safeRedirectPath(req.body.return_to, "/occupants"), "Ocupante creado correctamente.");
 });
 
-router.get("/:id", (req, res) => {
-  const occupant = db.prepare(`
+router.get("/:id", async (req, res) => {
+  const occupant = await db.prepare(`
     SELECT o.*, b.name AS building_name
     FROM occupants o
     LEFT JOIN buildings b ON o.building_id = b.id
@@ -119,7 +119,7 @@ router.get("/:id", (req, res) => {
   `).get(req.params.id);
   if (!occupant) return res.status(404).render("error", { title: "No encontrado", message: "Ocupante no encontrado." });
   if (!ensureBuildingAccess(req, res, occupant.building_id)) return;
-  const allocations = db.prepare(`
+  const allocations = await db.prepare(`
     SELECT a.*, r.receipt_number, r.period
     FROM receipt_allocations a
     JOIN receipts r ON a.receipt_id = r.id
@@ -129,27 +129,27 @@ router.get("/:id", (req, res) => {
   res.render("occupants/detail", { occupant, allocations });
 });
 
-router.get("/:id/edit", (req, res) => {
-  const occupant = db.prepare("SELECT * FROM occupants WHERE id = ?").get(req.params.id);
+router.get("/:id/edit", async (req, res) => {
+  const occupant = await db.prepare("SELECT * FROM occupants WHERE id = ?").get(req.params.id);
   if (!occupant) return res.status(404).render("error", { title: "No encontrado", message: "Ocupante no encontrado." });
   if (!ensureBuildingAccess(req, res, occupant.building_id)) return;
-  res.render("occupants/form", { title: "Editar ocupante", occupant, buildings: activeBuildings(req.currentUser, occupant.building_id || 0), errors: [] });
+  res.render("occupants/form", { title: "Editar ocupante", occupant, buildings: await activeBuildings(req.currentUser, occupant.building_id || 0), errors: [] });
 });
 
-router.put("/:id", (req, res) => {
-  const occupant = db.prepare("SELECT * FROM occupants WHERE id = ?").get(req.params.id);
+router.put("/:id", async (req, res) => {
+  const occupant = await db.prepare("SELECT * FROM occupants WHERE id = ?").get(req.params.id);
   if (!occupant) return res.status(404).render("error", { title: "No encontrado", message: "Ocupante no encontrado." });
   if (!ensureBuildingAccess(req, res, occupant.building_id)) return;
-  const errors = validateOccupant(req.body, req.currentUser, Number(req.params.id));
+  const errors = await validateOccupant(req.body, req.currentUser, Number(req.params.id));
   if (errors.length) {
     return res.status(400).render("occupants/form", {
       title: "Editar ocupante",
       occupant: { ...req.body, id: req.params.id },
-      buildings: activeBuildings(req.currentUser, Number(req.body.building_id)),
+      buildings: await activeBuildings(req.currentUser, Number(req.body.building_id)),
       errors
     });
   }
-  db.prepare(`
+  await db.prepare(`
     UPDATE occupants
     SET building_id = ?, full_name = ?, document = ?, phone = ?, email = ?, floor = ?, unit = ?, is_active = ?, updated_by = ?
     WHERE id = ?
@@ -168,29 +168,29 @@ router.put("/:id", (req, res) => {
   redirectWith(res, `/occupants/${req.params.id}`, "Ocupante actualizado correctamente.");
 });
 
-router.post("/:id/deactivate", (req, res) => {
-  const occupant = db.prepare("SELECT building_id FROM occupants WHERE id = ?").get(req.params.id);
+router.post("/:id/deactivate", async (req, res) => {
+  const occupant = await db.prepare("SELECT building_id FROM occupants WHERE id = ?").get(req.params.id);
   if (!occupant) return res.status(404).render("error", { title: "No encontrado", message: "Ocupante no encontrado." });
   if (!ensureBuildingAccess(req, res, occupant.building_id)) return;
-  db.prepare("UPDATE occupants SET is_active = 0, updated_by = ? WHERE id = ?").run(req.currentUser.id, req.params.id);
+  await db.prepare("UPDATE occupants SET is_active = 0, updated_by = ? WHERE id = ?").run(req.currentUser.id, req.params.id);
   redirectWith(res, "/occupants", "Ocupante desactivado.");
 });
 
-router.delete("/:id", (req, res) => {
-  const occupant = db.prepare("SELECT building_id FROM occupants WHERE id = ?").get(req.params.id);
+router.delete("/:id", async (req, res) => {
+  const occupant = await db.prepare("SELECT building_id FROM occupants WHERE id = ?").get(req.params.id);
   if (!occupant) return res.status(404).render("error", { title: "No encontrado", message: "Ocupante no encontrado." });
   if (!ensureBuildingAccess(req, res, occupant.building_id)) return;
-  const payments = db.prepare(`
+  const payments = Number((await db.prepare(`
     SELECT COUNT(*) AS total
     FROM payments p
     JOIN receipt_allocations a ON p.allocation_id = a.id
     WHERE a.occupant_id = ?
-  `).get(req.params.id).total;
+  `).get(req.params.id)).total);
   if (payments > 0) {
-    db.prepare("UPDATE occupants SET is_active = 0, updated_by = ? WHERE id = ?").run(req.currentUser.id, req.params.id);
+    await db.prepare("UPDATE occupants SET is_active = 0, updated_by = ? WHERE id = ?").run(req.currentUser.id, req.params.id);
     return redirectWith(res, "/occupants", "Tiene pagos asociados; se desactivó en lugar de eliminar.", "warning");
   }
-  db.prepare("DELETE FROM occupants WHERE id = ?").run(req.params.id);
+  await db.prepare("DELETE FROM occupants WHERE id = ?").run(req.params.id);
   redirectWith(res, "/occupants", "Ocupante eliminado.");
 });
 

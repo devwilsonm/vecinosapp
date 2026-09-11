@@ -1,289 +1,233 @@
 const fs = require("fs");
 const path = require("path");
+const { AsyncLocalStorage } = require("async_hooks");
 const initSqlJs = require("sql.js");
+const { Pool } = require("pg");
 const { databasePath } = require("./config");
 const { hashPassword } = require("./utils/auth");
 
-let database = null;
-let inTransaction = false;
+const usePostgres = Boolean(process.env.DATABASE_URL);
+const transactionStorage = new AsyncLocalStorage();
+let sqliteDatabase = null;
+let pgPool = null;
 
 function normalizeParams(params) {
   if (params.length === 1 && Array.isArray(params[0])) return params[0];
   return params;
 }
 
-function saveDb() {
-  if (!database) return;
+function postgresSql(sql) {
+  let index = 0;
+  return sql.replace(/\?/g, () => `$${++index}`);
+}
+
+function postgresClient() {
+  if (!pgPool) {
+    pgPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false },
+      max: Number(process.env.DATABASE_POOL_MAX) || 5
+    });
+  }
+  return transactionStorage.getStore() || pgPool;
+}
+
+function saveSqliteDb() {
+  if (!sqliteDatabase) return;
   fs.mkdirSync(path.dirname(databasePath), { recursive: true });
   const tempPath = `${databasePath}.tmp`;
-  fs.writeFileSync(tempPath, Buffer.from(database.export()));
+  fs.writeFileSync(tempPath, Buffer.from(sqliteDatabase.export()));
   fs.renameSync(tempPath, databasePath);
 }
 
+async function query(sql, params = []) {
+  if (usePostgres) return postgresClient().query(postgresSql(sql), params);
+  const statement = sqliteDatabase.prepare(sql);
+  try {
+    if (params.length) statement.bind(params);
+    const rows = [];
+    while (statement.step()) rows.push(statement.getAsObject());
+    return { rows, rowCount: rows.length };
+  } finally {
+    statement.free();
+  }
+}
+
 const db = {
-  exec(sql) {
-    database.exec(sql);
-    saveDb();
+  async exec(sql) {
+    if (usePostgres) return postgresClient().query(sql);
+    sqliteDatabase.exec(sql);
+    saveSqliteDb();
+  },
+  async query(sql, params = []) {
+    return query(sql, params);
   },
   prepare(sql) {
     return {
-      get(...params) {
-        const stmt = database.prepare(sql);
-        try {
-          const values = normalizeParams(params);
-          if (values.length) stmt.bind(values);
-          if (!stmt.step()) return undefined;
-          return stmt.getAsObject();
-        } finally {
-          stmt.free();
-        }
+      async get(...rawParams) {
+        const params = normalizeParams(rawParams);
+        return (await query(sql, params)).rows[0];
       },
-      all(...params) {
-        const stmt = database.prepare(sql);
-        const rows = [];
-        try {
-          const values = normalizeParams(params);
-          if (values.length) stmt.bind(values);
-          while (stmt.step()) rows.push(stmt.getAsObject());
-          return rows;
-        } finally {
-          stmt.free();
-        }
+      async all(...rawParams) {
+        const params = normalizeParams(rawParams);
+        return (await query(sql, params)).rows;
       },
-      run(...params) {
-        const values = normalizeParams(params);
-        database.run(sql, values);
-        const last = database.exec("SELECT last_insert_rowid() AS id");
-        if (!inTransaction) saveDb();
-        return { lastInsertRowid: last[0]?.values[0]?.[0] || 0 };
+      async run(...rawParams) {
+        const params = normalizeParams(rawParams);
+        if (usePostgres) {
+          const statement = sql.trim().replace(/;$/, "");
+          const isInsertWithId = /^INSERT\s+INTO\s+(occupants|buildings|receipts|receipt_allocations|payments|public_allocation_links|users|roles|permissions)\b/i.test(statement)
+            && !/\bRETURNING\b/i.test(statement);
+          const result = await query(isInsertWithId ? `${statement} RETURNING id` : statement, params);
+          return { changes: result.rowCount || 0, lastInsertRowid: result.rows[0]?.id || 0 };
+        }
+        sqliteDatabase.run(sql, params);
+        const last = sqliteDatabase.exec("SELECT last_insert_rowid() AS id");
+        saveSqliteDb();
+        return { changes: sqliteDatabase.getRowsModified(), lastInsertRowid: last[0]?.values[0]?.[0] || 0 };
       }
     };
   },
   transaction(fn) {
-    return (...args) => {
-      database.run("BEGIN");
-      inTransaction = true;
+    return async (...args) => {
+      if (!usePostgres) {
+        sqliteDatabase.run("BEGIN");
+        try {
+          const result = await fn(...args);
+          sqliteDatabase.run("COMMIT");
+          saveSqliteDb();
+          return result;
+        } catch (error) {
+          try { sqliteDatabase.run("ROLLBACK"); } catch { /* Keep the original error. */ }
+          throw error;
+        }
+      }
+      const client = await pgPool.connect();
       try {
-        const result = fn(...args);
-        inTransaction = false;
-        database.run("COMMIT");
-        saveDb();
+        await client.query("BEGIN");
+        const result = await transactionStorage.run(client, () => fn(...args));
+        await client.query("COMMIT");
         return result;
       } catch (error) {
-        inTransaction = false;
-        try {
-          database.run("ROLLBACK");
-        } catch {
-          // Keep the original error; SQLite may already have ended the transaction.
-        }
+        await client.query("ROLLBACK");
         throw error;
+      } finally {
+        client.release();
       }
     };
   }
 };
 
 async function openDb() {
-  if (database) return;
+  if (usePostgres) {
+    await postgresClient().query("SELECT 1");
+    return;
+  }
+  if (sqliteDatabase) return;
   const SQL = await initSqlJs();
   fs.mkdirSync(path.dirname(databasePath), { recursive: true });
-  if (fs.existsSync(databasePath) && fs.statSync(databasePath).size > 0) {
-    database = new SQL.Database(fs.readFileSync(databasePath));
-  } else {
-    database = new SQL.Database();
-    saveDb();
-  }
+  sqliteDatabase = fs.existsSync(databasePath) && fs.statSync(databasePath).size > 0
+    ? new SQL.Database(fs.readFileSync(databasePath))
+    : new SQL.Database();
+  saveSqliteDb();
 }
+
+const postgresSchema = `
+  CREATE TABLE IF NOT EXISTS buildings (
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    name TEXT NOT NULL, address TEXT, floors INTEGER NOT NULL DEFAULT 1, notes TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INTEGER, updated_by INTEGER
+  );
+  CREATE TABLE IF NOT EXISTS occupants (
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    building_id INTEGER REFERENCES buildings(id), full_name TEXT NOT NULL, document TEXT NOT NULL UNIQUE,
+    phone TEXT, email TEXT, floor TEXT NOT NULL, unit TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, created_by INTEGER, updated_by INTEGER
+  );
+  CREATE TABLE IF NOT EXISTS roles (
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    name TEXT NOT NULL, key TEXT NOT NULL UNIQUE, description TEXT, is_system INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INTEGER, updated_by INTEGER
+  );
+  CREATE TABLE IF NOT EXISTS permissions (
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    name TEXT NOT NULL, key TEXT NOT NULL UNIQUE, module TEXT NOT NULL, description TEXT
+  );
+  CREATE TABLE IF NOT EXISTS receipts (
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    building_id INTEGER REFERENCES buildings(id), service_type TEXT NOT NULL, receipt_number TEXT NOT NULL UNIQUE,
+    period TEXT NOT NULL, issue_date TEXT NOT NULL, due_date TEXT NOT NULL, total_amount_cents INTEGER NOT NULL,
+    consumption_total_milli INTEGER NOT NULL DEFAULT 0, consumption_unit TEXT, description TEXT,
+    status TEXT NOT NULL DEFAULT 'pendiente', file_reference TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, created_by INTEGER, updated_by INTEGER
+  );
+  CREATE TABLE IF NOT EXISTS receipt_allocations (
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    receipt_id INTEGER NOT NULL REFERENCES receipts(id) ON DELETE CASCADE,
+    occupant_id INTEGER NOT NULL REFERENCES occupants(id), assigned_amount_cents INTEGER NOT NULL,
+    consumption_milli INTEGER NOT NULL DEFAULT 0, paid_amount_cents INTEGER NOT NULL DEFAULT 0,
+    balance_cents INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pendiente',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, created_by INTEGER, updated_by INTEGER,
+    UNIQUE(receipt_id, occupant_id)
+  );
+  CREATE TABLE IF NOT EXISTS payments (
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    allocation_id INTEGER NOT NULL REFERENCES receipt_allocations(id) ON DELETE CASCADE,
+    amount_cents INTEGER NOT NULL, payment_date TEXT NOT NULL, payment_method TEXT NOT NULL, note TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, created_by INTEGER
+  );
+  CREATE TABLE IF NOT EXISTS public_allocation_links (
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    receipt_id INTEGER NOT NULL UNIQUE REFERENCES receipts(id) ON DELETE CASCADE,
+    token TEXT NOT NULL UNIQUE, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    role_id INTEGER REFERENCES roles(id), full_name TEXT NOT NULL, email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, created_by INTEGER, updated_by INTEGER
+  );
+  CREATE TABLE IF NOT EXISTS role_permissions (
+    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    permission_id INTEGER NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+    PRIMARY KEY(role_id, permission_id)
+  );
+  CREATE TABLE IF NOT EXISTS user_buildings (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    building_id INTEGER NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
+    PRIMARY KEY(user_id, building_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_occupants_building ON occupants(building_id, floor, unit);
+  CREATE INDEX IF NOT EXISTS idx_receipts_building_status ON receipts(building_id, status, due_date);
+  CREATE INDEX IF NOT EXISTS idx_allocations_receipt ON receipt_allocations(receipt_id);
+  CREATE INDEX IF NOT EXISTS idx_allocations_occupant ON receipt_allocations(occupant_id);
+  CREATE INDEX IF NOT EXISTS idx_payments_allocation ON payments(allocation_id);
+  CREATE INDEX IF NOT EXISTS idx_public_allocation_links_token ON public_allocation_links(token);
+  CREATE INDEX IF NOT EXISTS idx_user_buildings_building ON user_buildings(building_id);
+  CREATE INDEX IF NOT EXISTS idx_users_role ON users(role_id);
+`;
+
+const sqliteSchema = postgresSchema
+  .replace(/INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY/g, "INTEGER PRIMARY KEY AUTOINCREMENT")
+  .replace(/\bTIMESTAMP\b/g, "TEXT")
+  .replace(/ REFERENCES [A-Za-z_]+\([^)]*\)(?: ON DELETE (?:CASCADE|SET NULL))?/g, "");
 
 async function initDb() {
   await openDb();
-  db.exec(`
-    PRAGMA foreign_keys = ON;
-
-    CREATE TABLE IF NOT EXISTS occupants (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      building_id INTEGER,
-      full_name TEXT NOT NULL,
-      document TEXT NOT NULL UNIQUE,
-      phone TEXT,
-      email TEXT,
-      floor TEXT NOT NULL,
-      unit TEXT NOT NULL,
-      is_active INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      created_by INTEGER,
-      updated_by INTEGER
-    );
-
-    CREATE TABLE IF NOT EXISTS buildings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      address TEXT,
-      floors INTEGER NOT NULL DEFAULT 1,
-      notes TEXT,
-      is_active INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      created_by INTEGER,
-      updated_by INTEGER
-    );
-
-    CREATE TABLE IF NOT EXISTS receipts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      building_id INTEGER,
-      service_type TEXT NOT NULL,
-      receipt_number TEXT NOT NULL UNIQUE,
-      period TEXT NOT NULL,
-      issue_date TEXT NOT NULL,
-      due_date TEXT NOT NULL,
-      total_amount_cents INTEGER NOT NULL,
-      consumption_total_milli INTEGER NOT NULL DEFAULT 0,
-      consumption_unit TEXT,
-      description TEXT,
-      status TEXT NOT NULL DEFAULT 'pendiente',
-      file_reference TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      created_by INTEGER,
-      updated_by INTEGER,
-      FOREIGN KEY(building_id) REFERENCES buildings(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS receipt_allocations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      receipt_id INTEGER NOT NULL,
-      occupant_id INTEGER NOT NULL,
-      assigned_amount_cents INTEGER NOT NULL,
-      consumption_milli INTEGER NOT NULL DEFAULT 0,
-      paid_amount_cents INTEGER NOT NULL DEFAULT 0,
-      balance_cents INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pendiente',
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      created_by INTEGER,
-      updated_by INTEGER,
-      UNIQUE(receipt_id, occupant_id),
-      FOREIGN KEY(receipt_id) REFERENCES receipts(id) ON DELETE CASCADE,
-      FOREIGN KEY(occupant_id) REFERENCES occupants(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS payments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      allocation_id INTEGER NOT NULL,
-      amount_cents INTEGER NOT NULL,
-      payment_date TEXT NOT NULL,
-      payment_method TEXT NOT NULL,
-      note TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      created_by INTEGER,
-      FOREIGN KEY(allocation_id) REFERENCES receipt_allocations(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS public_allocation_links (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      receipt_id INTEGER NOT NULL UNIQUE,
-      token TEXT NOT NULL UNIQUE,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(receipt_id) REFERENCES receipts(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      role_id INTEGER,
-      full_name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      is_active INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      created_by INTEGER,
-      updated_by INTEGER,
-      FOREIGN KEY(role_id) REFERENCES roles(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS roles (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      key TEXT NOT NULL UNIQUE,
-      description TEXT,
-      is_system INTEGER NOT NULL DEFAULT 0,
-      is_active INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      created_by INTEGER,
-      updated_by INTEGER
-    );
-
-    CREATE TABLE IF NOT EXISTS permissions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      key TEXT NOT NULL UNIQUE,
-      module TEXT NOT NULL,
-      description TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS role_permissions (
-      role_id INTEGER NOT NULL,
-      permission_id INTEGER NOT NULL,
-      PRIMARY KEY(role_id, permission_id),
-      FOREIGN KEY(role_id) REFERENCES roles(id) ON DELETE CASCADE,
-      FOREIGN KEY(permission_id) REFERENCES permissions(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS user_buildings (
-      user_id INTEGER NOT NULL,
-      building_id INTEGER NOT NULL,
-      PRIMARY KEY(user_id, building_id),
-      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY(building_id) REFERENCES buildings(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_occupants_building ON occupants(building_id, floor, unit);
-    CREATE INDEX IF NOT EXISTS idx_receipts_building_status ON receipts(building_id, status, due_date);
-    CREATE INDEX IF NOT EXISTS idx_allocations_receipt ON receipt_allocations(receipt_id);
-    CREATE INDEX IF NOT EXISTS idx_allocations_occupant ON receipt_allocations(occupant_id);
-    CREATE INDEX IF NOT EXISTS idx_payments_allocation ON payments(allocation_id);
-    CREATE INDEX IF NOT EXISTS idx_public_allocation_links_token ON public_allocation_links(token);
-    CREATE INDEX IF NOT EXISTS idx_user_buildings_building ON user_buildings(building_id);
-  `);
-
-  function ensureColumn(table, column, definition) {
-    const columns = db.prepare(`PRAGMA table_info(${table})`).all().map((item) => item.name);
-    if (!columns.includes(column)) {
-      database.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
-      saveDb();
-    }
-  }
-
-  ensureColumn("occupants", "building_id", "INTEGER");
-  ensureColumn("occupants", "created_by", "INTEGER");
-  ensureColumn("occupants", "updated_by", "INTEGER");
-  ensureColumn("buildings", "created_by", "INTEGER");
-  ensureColumn("buildings", "updated_by", "INTEGER");
-  ensureColumn("receipts", "building_id", "INTEGER");
-  ensureColumn("receipts", "created_by", "INTEGER");
-  ensureColumn("receipts", "updated_by", "INTEGER");
-  ensureColumn("receipts", "consumption_total_milli", "INTEGER NOT NULL DEFAULT 0");
-  ensureColumn("receipts", "consumption_unit", "TEXT");
-  ensureColumn("receipt_allocations", "created_by", "INTEGER");
-  ensureColumn("receipt_allocations", "updated_by", "INTEGER");
-  ensureColumn("receipt_allocations", "consumption_milli", "INTEGER NOT NULL DEFAULT 0");
-  ensureColumn("payments", "created_by", "INTEGER");
-  ensureColumn("users", "role_id", "INTEGER");
-  ensureColumn("users", "created_by", "INTEGER");
-  ensureColumn("users", "updated_by", "INTEGER");
-  ensureColumn("roles", "created_by", "INTEGER");
-  ensureColumn("roles", "updated_by", "INTEGER");
-
-  db.exec("CREATE INDEX IF NOT EXISTS idx_users_role ON users(role_id);");
-
+  await db.exec(usePostgres ? postgresSchema : sqliteSchema);
   const defaultRoles = [
     ["Super Admin", "super_admin", "Acceso total a la aplicación.", 1],
     ["Administrador", "admin", "Administra la operación general sin mantenimiento crítico.", 1],
     ["Propietario", "owner", "Gestiona edificios asignados, ocupantes, pisos, recibos y pagos.", 1],
     ["Operador", "operator", "Registra información operativa con permisos limitados.", 1]
   ];
-  defaultRoles.forEach((role) => {
-    const exists = db.prepare("SELECT id FROM roles WHERE key = ?").get(role[1]);
-    if (!exists) {
-      db.prepare("INSERT INTO roles (name, key, description, is_system, is_active) VALUES (?, ?, ?, ?, 1)").run(...role);
+  for (const role of defaultRoles) {
+    if (!(await db.prepare("SELECT id FROM roles WHERE key = ?").get(role[1]))) {
+      await db.prepare("INSERT INTO roles (name, key, description, is_system, is_active) VALUES (?, ?, ?, ?, 1)").run(...role);
     }
-  });
-
+  }
   const defaultPermissions = [
     ["Ver dashboard", "dashboard.view", "Dashboard", "Acceder al resumen principal."],
     ["Gestionar edificios", "buildings.manage", "Gestión", "Crear, editar o desactivar edificios."],
@@ -296,58 +240,45 @@ async function initDb() {
     ["Administrar perfiles", "roles.manage", "Administración", "Gestionar perfiles y permisos."],
     ["Administrar mantenimiento", "maintenance.manage", "Administración", "Acceder a opciones de mantenimiento."]
   ];
-  defaultPermissions.forEach((permission) => {
-    const exists = db.prepare("SELECT id FROM permissions WHERE key = ?").get(permission[1]);
-    if (!exists) {
-      db.prepare("INSERT INTO permissions (name, key, module, description) VALUES (?, ?, ?, ?)").run(...permission);
+  for (const permission of defaultPermissions) {
+    if (!(await db.prepare("SELECT id FROM permissions WHERE key = ?").get(permission[1]))) {
+      await db.prepare("INSERT INTO permissions (name, key, module, description) VALUES (?, ?, ?, ?)").run(...permission);
     }
-  });
-
-  const allPermissions = db.prepare("SELECT id FROM permissions").all();
-  const permissionByKeyStmt = db.prepare("SELECT id FROM permissions WHERE key = ?");
-  const roleByKeyStmt = db.prepare("SELECT id FROM roles WHERE key = ?");
-  const permissionByKey = (key) => permissionByKeyStmt.get(key);
-  const roleByKey = (key) => roleByKeyStmt.get(key);
-  const rolePermissionSets = {
+  }
+  const allPermissions = await db.prepare("SELECT id FROM permissions").all();
+  const permissionByKey = (key) => db.prepare("SELECT id FROM permissions WHERE key = ?").get(key);
+  const roleByKey = (key) => db.prepare("SELECT id FROM roles WHERE key = ?").get(key);
+  const rolePermissionKeys = {
     super_admin: allPermissions.map((permission) => permission.id),
-    admin: ["dashboard.view", "buildings.manage", "occupants.manage", "receipts.manage", "allocations.manage", "payments.manage", "reports.view"].map((key) => permissionByKey(key)?.id).filter(Boolean),
-    owner: ["dashboard.view", "buildings.manage", "occupants.manage", "receipts.manage", "allocations.manage", "payments.manage", "reports.view"].map((key) => permissionByKey(key)?.id).filter(Boolean),
-    operator: ["dashboard.view", "occupants.manage", "payments.manage", "reports.view"].map((key) => permissionByKey(key)?.id).filter(Boolean)
+    admin: ["dashboard.view", "buildings.manage", "occupants.manage", "receipts.manage", "allocations.manage", "payments.manage", "reports.view"],
+    owner: ["dashboard.view", "buildings.manage", "occupants.manage", "receipts.manage", "allocations.manage", "payments.manage", "reports.view"],
+    operator: ["dashboard.view", "occupants.manage", "payments.manage", "reports.view"]
   };
-  Object.entries(rolePermissionSets).forEach(([roleKey, permissionIds]) => {
-    const role = roleByKey(roleKey);
-    if (!role) return;
-    permissionIds.forEach((permissionId) => {
-      const exists = db.prepare("SELECT 1 FROM role_permissions WHERE role_id = ? AND permission_id = ?").get(role.id, permissionId);
-      if (!exists) db.prepare("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)").run(role.id, permissionId);
-    });
-  });
-
-  const userCount = db.prepare("SELECT COUNT(*) AS total FROM users").get().total;
-  const superAdminRole = db.prepare("SELECT id FROM roles WHERE key = 'super_admin'").get();
+  for (const [roleKey, keys] of Object.entries(rolePermissionKeys)) {
+    const role = await roleByKey(roleKey);
+    const permissionIds = roleKey === "super_admin" ? keys : (await Promise.all(keys.map(permissionByKey))).filter(Boolean).map((item) => item.id);
+    if (!role) continue;
+    for (const permissionId of permissionIds) {
+      if (!(await db.prepare("SELECT 1 FROM role_permissions WHERE role_id = ? AND permission_id = ?").get(role.id, permissionId))) {
+        await db.prepare("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)").run(role.id, permissionId);
+      }
+    }
+  }
+  const userCount = Number((await db.prepare("SELECT COUNT(*) AS total FROM users").get()).total);
+  const superAdminRole = await db.prepare("SELECT id FROM roles WHERE key = 'super_admin'").get();
   if (userCount === 0) {
-    db.prepare(`
-      INSERT INTO users (role_id, full_name, email, password_hash, is_active)
-      VALUES (?, ?, ?, ?, 1)
-    `).run(superAdminRole?.id || null, "Administrador", "admin@vecinosapp.local", hashPassword("admin123"));
+    await db.prepare("INSERT INTO users (role_id, full_name, email, password_hash, is_active) VALUES (?, ?, ?, ?, 1)").run(superAdminRole?.id || null, "Administrador", "admin@vecinosapp.local", hashPassword("admin123"));
   } else if (superAdminRole) {
-    db.prepare("UPDATE users SET role_id = ? WHERE email = ? AND role_id IS NULL").run(superAdminRole.id, "admin@vecinosapp.local");
+    await db.prepare("UPDATE users SET role_id = ? WHERE email = ? AND role_id IS NULL").run(superAdminRole.id, "admin@vecinosapp.local");
   }
-
-  const buildingCount = db.prepare("SELECT COUNT(*) AS total FROM buildings").get().total;
-  const occupantsWithoutBuilding = db.prepare("SELECT COUNT(*) AS total FROM occupants WHERE building_id IS NULL").get().total;
+  const buildingCount = Number((await db.prepare("SELECT COUNT(*) AS total FROM buildings").get()).total);
+  const occupantsWithoutBuilding = Number((await db.prepare("SELECT COUNT(*) AS total FROM occupants WHERE building_id IS NULL").get()).total);
   if (buildingCount === 0 && occupantsWithoutBuilding > 0) {
-    const buildingId = db.prepare(`
-      INSERT INTO buildings (name, address, floors, notes, is_active)
-      VALUES (?, ?, ?, ?, 1)
-    `).run("Edificio principal", "", 3, "Edificio creado automáticamente para ocupantes existentes.").lastInsertRowid;
-    db.prepare("UPDATE occupants SET building_id = ? WHERE building_id IS NULL").run(buildingId);
+    const building = await db.prepare("INSERT INTO buildings (name, address, floors, notes, is_active) VALUES (?, ?, ?, ?, 1)").run("Edificio principal", "", 3, "Edificio creado automáticamente para ocupantes existentes.");
+    await db.prepare("UPDATE occupants SET building_id = ? WHERE building_id IS NULL").run(building.lastInsertRowid);
   }
-
-  const fallbackBuilding = db.prepare("SELECT id FROM buildings ORDER BY id LIMIT 1").get();
-  if (fallbackBuilding) {
-    db.prepare("UPDATE receipts SET building_id = ? WHERE building_id IS NULL").run(fallbackBuilding.id);
-  }
+  const fallbackBuilding = await db.prepare("SELECT id FROM buildings ORDER BY id LIMIT 1").get();
+  if (fallbackBuilding) await db.prepare("UPDATE receipts SET building_id = ? WHERE building_id IS NULL").run(fallbackBuilding.id);
 }
 
-module.exports = { db, initDb };
+module.exports = { db, initDb, openDb, usePostgres };

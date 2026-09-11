@@ -3,8 +3,8 @@ const { db } = require("../db");
 
 const router = express.Router();
 
-function allocationsByFloor(receiptId) {
-  const allocations = db.prepare(`
+async function allocationsByFloor(receiptId) {
+  const allocations = await db.prepare(`
     SELECT a.*, o.full_name, o.floor, o.unit
     FROM receipt_allocations a
     JOIN occupants o ON a.occupant_id = o.id
@@ -34,11 +34,11 @@ function allocationsByFloor(receiptId) {
   }, []);
 }
 
-router.get("/allocations/:token", (req, res) => {
-  const link = db.prepare("SELECT receipt_id FROM public_allocation_links WHERE token = ?").get(req.params.token);
+router.get("/allocations/:token", async (req, res) => {
+  const link = await db.prepare("SELECT receipt_id FROM public_allocation_links WHERE token = ?").get(req.params.token);
   if (!link) return res.status(404).render("error", { title: "Enlace no válido", message: "El enlace público no existe o ya no está disponible." });
 
-  const receipt = db.prepare(`
+  const receipt = await db.prepare(`
     SELECT r.*, b.name AS building_name
     FROM receipts r
     LEFT JOIN buildings b ON r.building_id = b.id
@@ -49,7 +49,7 @@ router.get("/allocations/:token", (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.render("allocations/shared", {
     receipt,
-    allocationsByFloor: allocationsByFloor(receipt.id),
+    allocationsByFloor: await allocationsByFloor(receipt.id),
     sharePath: req.originalUrl
   });
 });

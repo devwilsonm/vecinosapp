@@ -15,11 +15,11 @@ function redirectWith(res, url, message, type = "success") {
   res.redirect(`${url}?message=${encodeURIComponent(message)}&type=${type}`);
 }
 
-function publicSharePath(receiptId) {
-  let link = db.prepare("SELECT token FROM public_allocation_links WHERE receipt_id = ?").get(receiptId);
+async function publicSharePath(receiptId) {
+  let link = await db.prepare("SELECT token FROM public_allocation_links WHERE receipt_id = ?").get(receiptId);
   if (!link) {
     const token = crypto.randomBytes(32).toString("hex");
-    db.prepare("INSERT INTO public_allocation_links (receipt_id, token) VALUES (?, ?)").run(receiptId, token);
+    await db.prepare("INSERT INTO public_allocation_links (receipt_id, token) VALUES (?, ?)").run(receiptId, token);
     link = { token };
   }
   return `/shared/allocations/${link.token}`;
@@ -51,14 +51,14 @@ function splitByConsumption(totalCents, consumptions) {
   });
 }
 
-function allocationFormData(receipt, state = {}) {
-  const occupants = db.prepare(`
+async function allocationFormData(receipt, state = {}) {
+  const occupants = await db.prepare(`
     SELECT *
     FROM occupants
     WHERE is_active = 1 AND building_id = ?
     ORDER BY CAST(floor AS INTEGER), floor, unit, full_name
   `).all(receipt.building_id);
-  const existing = db.prepare(`
+  const existing = await db.prepare(`
     SELECT a.*, o.full_name, o.floor, o.unit
     FROM receipt_allocations a
     JOIN occupants o ON a.occupant_id = o.id
@@ -121,33 +121,33 @@ function allocationFormData(receipt, state = {}) {
   };
 }
 
-function renderAllocationForm(res, receipt, state = {}, status = 200) {
-  const viewData = allocationFormData(receipt, state);
+async function renderAllocationForm(res, receipt, state = {}, status = 200) {
+  const viewData = await allocationFormData(receipt, state);
   return res.status(status).render("allocations/form", {
     ...viewData,
-    sharePath: viewData.existing.length ? publicSharePath(receipt.id) : null
+    sharePath: viewData.existing.length ? await publicSharePath(receipt.id) : null
   });
 }
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const access = buildingFilter(req.currentUser, "r.building_id", "WHERE");
-  const receipts = db.prepare(`
+  const receipts = await db.prepare(`
     SELECT r.*, b.name AS building_name, COUNT(a.id) AS allocation_count
     FROM receipts r
     LEFT JOIN buildings b ON r.building_id = b.id
     LEFT JOIN receipt_allocations a ON r.id = a.receipt_id
     ${access.sql}
-    GROUP BY r.id
+    GROUP BY r.id, b.name
     ORDER BY r.created_at DESC
   `).all(...access.params);
-  receipts.forEach((receipt) => {
-    if (receipt.allocation_count > 0) receipt.sharePath = publicSharePath(receipt.id);
-  });
+  for (const receipt of receipts) {
+    if (Number(receipt.allocation_count) > 0) receipt.sharePath = await publicSharePath(receipt.id);
+  }
   res.render("allocations/index", { receipts });
 });
 
-router.get("/receipt/:id", (req, res) => {
-  const receipt = db.prepare(`
+router.get("/receipt/:id", async (req, res) => {
+  const receipt = await db.prepare(`
     SELECT r.*, b.name AS building_name
     FROM receipts r
     LEFT JOIN buildings b ON r.building_id = b.id
@@ -155,11 +155,11 @@ router.get("/receipt/:id", (req, res) => {
   `).get(req.params.id);
   if (!receipt) return res.status(404).render("error", { title: "No encontrado", message: "Recibo no encontrado." });
   if (!ensureBuildingAccess(req, res, receipt.building_id)) return;
-  renderAllocationForm(res, receipt);
+  await renderAllocationForm(res, receipt);
 });
 
-router.post("/receipt/:id", (req, res) => {
-  const receipt = db.prepare("SELECT * FROM receipts WHERE id = ?").get(req.params.id);
+router.post("/receipt/:id", async (req, res) => {
+  const receipt = await db.prepare("SELECT * FROM receipts WHERE id = ?").get(req.params.id);
   if (!receipt) return res.status(404).render("error", { title: "No encontrado", message: "Recibo no encontrado." });
   if (!ensureBuildingAccess(req, res, receipt.building_id)) return;
 
@@ -184,20 +184,20 @@ router.post("/receipt/:id", (req, res) => {
     recalculate,
     errors: [message]
   }, status);
-  const existing = db.prepare("SELECT * FROM receipt_allocations WHERE receipt_id = ?").all(req.params.id);
-  const hasPayments = db.prepare(`
+  const existing = await db.prepare("SELECT * FROM receipt_allocations WHERE receipt_id = ?").all(req.params.id);
+  const hasPayments = Number((await db.prepare(`
     SELECT COUNT(*) AS total
     FROM payments p
     JOIN receipt_allocations a ON p.allocation_id = a.id
     WHERE a.receipt_id = ?
-  `).get(req.params.id).total;
+  `).get(req.params.id)).total);
 
   if (receipt.total_amount_cents <= 0) return fail("No se puede prorratear un recibo con monto cero.");
   if (selected.length === 0) return fail("Selecciona al menos un ocupante.");
   if (existing.length > 0 && !recalculate) return fail("Este recibo ya tiene prorrateo. Marca recalcular para reemplazarlo.");
   if (existing.length > 0 && hasPayments > 0) return fail("No se puede recalcular un prorrateo con pagos asociados.");
 
-  const activeOccupants = db.prepare(`
+  const activeOccupants = await db.prepare(`
     SELECT id, full_name, floor, unit
     FROM occupants
     WHERE is_active = 1 AND building_id = ? AND id IN (${selected.map(() => "?").join(",")})
@@ -284,22 +284,22 @@ router.post("/receipt/:id", (req, res) => {
     });
   }
 
-  const save = db.transaction(() => {
-    db.prepare("DELETE FROM receipt_allocations WHERE receipt_id = ?").run(req.params.id);
+  const save = db.transaction(async () => {
+    await db.prepare("DELETE FROM receipt_allocations WHERE receipt_id = ?").run(req.params.id);
     const insert = db.prepare(`
       INSERT INTO receipt_allocations (receipt_id, occupant_id, assigned_amount_cents, consumption_milli, paid_amount_cents, balance_cents, status, created_by, updated_by)
       VALUES (?, ?, ?, ?, 0, ?, 'pendiente', ?, ?)
     `);
-    activeOccupants.forEach((occupant, index) => {
+    for (const occupant of activeOccupants) {
       const consumptionMilli = consumptionByOccupant.get(occupant.id) || 0;
       const assignedAmount = sharesByOccupant.get(occupant.id) || 0;
-      insert.run(receipt.id, occupant.id, assignedAmount, consumptionMilli, assignedAmount, req.currentUser.id, req.currentUser.id);
-    });
-    updateReceiptStatus(receipt.id);
-    db.prepare("UPDATE receipts SET updated_by = ? WHERE id = ?").run(req.currentUser.id, receipt.id);
+      await insert.run(receipt.id, occupant.id, assignedAmount, consumptionMilli, assignedAmount, req.currentUser.id, req.currentUser.id);
+    }
+    await updateReceiptStatus(receipt.id);
+    await db.prepare("UPDATE receipts SET updated_by = ? WHERE id = ?").run(req.currentUser.id, receipt.id);
   });
 
-  save();
+  await save();
   redirectWith(res, `/receipts/${receipt.id}`, "Prorrateo generado correctamente.");
 });
 

@@ -16,7 +16,7 @@ function buildingFilter(user, columnName, prefix = "AND") {
   return { sql: ` ${prefix} ${columnName} IN (${ids.map(() => "?").join(",")})`, params: ids };
 }
 
-function activeBuildingsForUser(db, user, selectedId = 0) {
+async function activeBuildingsForUser(db, user, selectedId = 0) {
   if (canAccessAllBuildings(user)) {
     return db.prepare("SELECT * FROM buildings WHERE is_active = 1 OR id = ? ORDER BY name").all(selectedId);
   }

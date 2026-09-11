@@ -28,8 +28,8 @@ function checkCleanInstall() {
   const databasePath = path.join(tempDir, "vecinosapp.sqlite");
   const logDatabasePath = path.join(tempDir, "vecinosapp_logs.sqlite");
   const code = `
-    Promise.all([require('./src/db').initDb(), require('./src/logDb').initLogDb()])
-      .then(() => {
+    (async () => {
+      await Promise.all([require('./src/db').initDb(), require('./src/logDb').initLogDb()]);
         const { db } = require('./src/db');
         const { listApiLogs } = require('./src/logDb');
         const required = {
@@ -45,19 +45,17 @@ function checkCleanInstall() {
           user_buildings: ['user_id','building_id']
         };
         for (const [table, columns] of Object.entries(required)) {
-          const existing = db.prepare('PRAGMA table_info(' + table + ')').all().map((column) => column.name);
           for (const column of columns) {
-            if (!existing.includes(column)) throw new Error(table + '.' + column + ' no fue creado');
+            await db.query('SELECT ' + column + ' FROM ' + table + ' LIMIT 0');
           }
         }
-        const users = db.prepare('SELECT COUNT(*) AS total FROM users').get().total;
-        const roles = db.prepare('SELECT COUNT(*) AS total FROM roles').get().total;
-        const permissions = db.prepare('SELECT COUNT(*) AS total FROM permissions').get().total;
-        const superAdmin = db.prepare("SELECT id FROM users WHERE email = 'admin@vecinosapp.local'").get();
+        const users = Number((await db.prepare('SELECT COUNT(*) AS total FROM users').get()).total);
+        const roles = Number((await db.prepare('SELECT COUNT(*) AS total FROM roles').get()).total);
+        const permissions = Number((await db.prepare('SELECT COUNT(*) AS total FROM permissions').get()).total);
+        const superAdmin = await db.prepare("SELECT id FROM users WHERE email = 'admin@vecinosapp.local'").get();
         if (users < 1 || roles < 4 || permissions < 10 || !superAdmin) throw new Error('Datos base incompletos');
-        if (!Array.isArray(listApiLogs({ limit: 10 }))) throw new Error('BD de logs no inicializa correctamente');
-      })
-      .catch((error) => { console.error(error.message); process.exit(1); });
+        if (!Array.isArray(await listApiLogs({ limit: 10 }))) throw new Error('BD de logs no inicializa correctamente');
+    })().catch((error) => { console.error(error.message); process.exit(1); });
   `;
   const result = run("node", ["-e", code], {
     env: { DATABASE_PATH: databasePath, LOG_DATABASE_PATH: logDatabasePath }
@@ -191,7 +189,7 @@ function checkAuditColumns() {
   ];
 
   for (const table of ["buildings", "occupants", "receipts", "receipt_allocations", "payments"]) {
-    addCheck(`Tabla auditada: ${table}`, db.includes(`ensureColumn("${table}"`));
+    addCheck(`Tabla auditada: ${table}`, db.includes(`CREATE TABLE IF NOT EXISTS ${table}`));
   }
 
   for (const file of routeFiles) {

@@ -1,3 +1,4 @@
+require("express-async-errors");
 const express = require("express");
 const fs = require("fs");
 const methodOverride = require("method-override");
@@ -38,7 +39,7 @@ app.disable("x-powered-by");
 app.use(securityHeaders);
 app.use(express.urlencoded({ extended: false, limit: "50kb" }));
 app.use(methodOverride("_method"));
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   const allowedFlashTypes = new Set(["success", "warning", "danger"]);
   res.locals.path = req.path;
   const flashType = allowedFlashTypes.has(req.query.type) ? req.query.type : "success";
@@ -52,26 +53,26 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   const session = readSession(req);
-  req.currentUser = session ? db.prepare(`
+  req.currentUser = session ? (await db.prepare(`
     SELECT u.id, u.role_id, u.full_name, u.email, r.name AS role_name, r.key AS role_key
     FROM users u
     LEFT JOIN roles r ON u.role_id = r.id
     WHERE u.id = ? AND u.is_active = 1
-  `).get(session.userId) : null;
+  `).get(session.userId)) : null;
   if (req.currentUser) {
-    req.currentUser.permissions = db.prepare(`
+    req.currentUser.permissions = (await db.prepare(`
       SELECT p.key
       FROM permissions p
       JOIN role_permissions rp ON p.id = rp.permission_id
       WHERE rp.role_id = ?
-    `).all(req.currentUser.role_id).map((permission) => permission.key);
-    req.currentUser.building_ids = db.prepare(`
+    `).all(req.currentUser.role_id)).map((permission) => permission.key);
+    req.currentUser.building_ids = (await db.prepare(`
       SELECT building_id
       FROM user_buildings
       WHERE user_id = ?
-    `).all(req.currentUser.id).map((row) => Number(row.building_id));
+    `).all(req.currentUser.id)).map((row) => Number(row.building_id));
   }
   res.locals.currentUser = req.currentUser;
   res.locals.isSuperAdmin = isSuperAdmin(req.currentUser);
@@ -106,7 +107,7 @@ app.use((req, res, next) => {
   };
   res.on("finish", () => {
     if (!shouldAuditRequest(req, res.statusCode)) return;
-    writeApiLog({
+    void writeApiLog({
       userId: req.currentUser?.id,
       userEmail: req.currentUser?.email || req.auditUserEmail,
       method: req.method,
