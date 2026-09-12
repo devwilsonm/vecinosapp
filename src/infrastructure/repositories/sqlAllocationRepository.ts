@@ -40,7 +40,13 @@ export class SqlAllocationRepository implements AllocationRepository {
   }
 
   listByReceipt(id: number | string) {
-    return this.database.prepare("SELECT * FROM receipt_allocations WHERE receipt_id = ?").all(id);
+    return this.database.prepare(`
+      SELECT a.*, o.full_name, o.floor, o.unit
+      FROM receipt_allocations a
+      JOIN occupants o ON a.occupant_id = o.id
+      WHERE a.receipt_id = ?
+      ORDER BY CAST(o.floor AS INTEGER), o.floor, o.unit, o.full_name
+    `).all(id);
   }
 
   async countByReceipt(id: number | string) {
