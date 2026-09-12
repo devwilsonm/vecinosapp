@@ -165,6 +165,20 @@ nav a:hover, a:hover { color: var(--primary-dark); }
   grid-column: 1 / -1;
 }
 
+.login-form .form-actions {
+  justify-content: center;
+}
+
+.login-submit {
+  gap: 8px;
+  min-width: 112px;
+}
+
+.button-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
 .menu-toggle {
   display: none;
   width: 42px;
@@ -393,6 +407,22 @@ tr:last-child td { border-bottom: 0; }
 
 .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .inline-form, .actions form { display: inline; margin: 0; }
+.icon-action {
+  display: inline-flex;
+  width: 38px;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #eef3f5;
+  color: var(--primary);
+  font-size: 1.1rem;
+  line-height: 1;
+  text-decoration: none;
+}
+.icon-action:hover { background: #dce8ec; color: var(--primary-dark); }
+.action-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
 .share-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -804,7 +834,7 @@ textarea { min-height: 100px; }
   }
   .mobile-cards tbody td.actions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
     text-align: center;
   }
@@ -822,6 +852,8 @@ textarea { min-height: 100px; }
     border-radius: 6px;
     font-size: 0.88rem;
   }
+  .mobile-cards tbody td.actions .icon-action { width: 100%; }
+  .mobile-cards tbody td.allocation-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mobile-cards tbody td[colspan] {
     display: block;
     text-align: left;

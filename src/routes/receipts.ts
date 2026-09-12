@@ -65,6 +65,21 @@ router.get("/new", async (req, res) => {
   });
 });
 
+router.get("/:id/duplicate", async (req, res) => {
+  const receipt = await receiptRepository.findRawById(req.params.id);
+  if (!receipt) return res.status(404).render("error", { title: "No encontrado", message: "Recibo no encontrado." });
+  if (!ensureBuildingAccess(req, res, receipt.building_id)) return;
+  const copy = { ...receipt };
+  delete copy.id;
+  copy.receipt_number = `${receipt.receipt_number || ""}-copia`.slice(0, 80);
+  res.render("receipts/form", {
+    title: "Duplicar recibo",
+    receipt: copy,
+    buildings: await activeBuildings(req.currentUser, receipt.building_id || 0),
+    errors: []
+  });
+});
+
 router.post("/", async (req, res) => {
   const { errors, totalCents, consumptionTotalMilli } = await validateReceipt(req.body, req.currentUser);
   if (errors.length) {
