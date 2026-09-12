@@ -1,5 +1,6 @@
 const express = require("express");
 const { clearSession, setSession, verifyPassword } = require("../utils/auth");
+const { invalidatePageCache } = require("../utils/cache");
 const { userRepository } = require("../infrastructure/container");
 
 const router = express.Router();
@@ -22,6 +23,14 @@ router.post("/login", async (req, res) => {
   req.auditMessage = "Inicio de sesión correcto.";
   setSession(res, user.id);
   res.redirect("/");
+});
+
+router.post("/theme", async (req, res) => {
+  if (!req.currentUser) return res.status(401).json({ error: "Sesión no válida." });
+  if (!["light", "dark"].includes(req.body.theme)) return res.status(400).json({ error: "Tema no válido." });
+  await userRepository.updateTheme(req.currentUser.id, req.body.theme);
+  invalidatePageCache();
+  res.json({ theme: req.body.theme });
 });
 
 router.post("/logout", (req, res) => {

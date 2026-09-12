@@ -9,6 +9,7 @@ export interface UserInput {
 export interface UserRepository {
   findActiveByEmail(email: string): Promise<Record<string, any> | undefined>;
   findSessionUser(userId: number): Promise<Record<string, any> | undefined>;
+  updateTheme(userId: number, theme: "light" | "dark"): Promise<void>;
   listPermissionKeys(roleId: number): Promise<string[]>;
   listBuildingIds(userId: number): Promise<number[]>;
   findById(id: number | string): Promise<Record<string, any> | undefined>;

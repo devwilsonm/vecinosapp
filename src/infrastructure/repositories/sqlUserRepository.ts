@@ -8,9 +8,13 @@ export class SqlUserRepository implements UserRepository {
     return this.database.prepare("SELECT * FROM users WHERE email = ? AND is_active = 1").get(email);
   }
 
+  async updateTheme(userId: number, theme: "light" | "dark") {
+    await this.database.prepare("UPDATE users SET theme = ? WHERE id = ?").run(theme, userId);
+  }
+
   findSessionUser(userId: number) {
     return this.database.prepare(`
-      SELECT u.id, u.role_id, u.full_name, u.email, r.name AS role_name, r.key AS role_key
+      SELECT u.id, u.role_id, u.full_name, u.email, u.theme, r.name AS role_name, r.key AS role_key
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.id = ? AND u.is_active = 1

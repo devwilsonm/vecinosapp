@@ -217,6 +217,12 @@ const sqliteSchema = postgresSchema
 async function initDb() {
   await openDb();
   await db.exec(usePostgres ? postgresSchema : sqliteSchema);
+  try {
+    await db.exec("ALTER TABLE users ADD COLUMN theme TEXT NOT NULL DEFAULT 'light'");
+  } catch (error) {
+    const message = String(error?.message || error).toLowerCase();
+    if (!message.includes("already exists") && !message.includes("duplicate column")) throw error;
+  }
   const defaultRoles = [
     ["Super Admin", "super_admin", "Acceso total a la aplicación.", 1],
     ["Administrador", "admin", "Administra la operación general sin mantenimiento crítico.", 1],

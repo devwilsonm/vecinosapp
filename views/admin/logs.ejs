@@ -5,9 +5,9 @@
 </div>
 
 <section class="stats-grid">
-  <div class="stat"><span>Total de eventos</span><strong><%= summary.total %></strong></div>
-  <div class="stat"><span>Eventos con usuario</span><strong><%= summary.withUser %></strong></div>
-  <div class="stat"><span>Intentos de login</span><strong><%= summary.loginEvents %></strong></div>
+  <div class="stat stat-info"><span>Total de eventos</span><strong><%= summary.total %></strong></div>
+  <div class="stat stat-success"><span>Eventos con usuario</span><strong><%= summary.withUser %></strong></div>
+  <div class="stat stat-warning"><span>Intentos de login</span><strong><%= summary.loginEvents %></strong></div>
 </section>
 
 <form method="get" action="/admin/logs" class="form">

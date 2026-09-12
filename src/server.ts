@@ -33,6 +33,15 @@ const buildInfoPath = path.join(rootDir, "build-info.json");
 const assetVersion = fs.existsSync(buildInfoPath)
   ? JSON.parse(fs.readFileSync(buildInfoPath, "utf8")).assetVersion
   : process.env.ASSET_VERSION || new Date().toISOString().replace(/\D/g, "");
+
+function readThemeCookie(req) {
+  const cookie = String(req.headers.cookie || "")
+    .split(";")
+    .map((part) => part.trim().split("="))
+    .find(([name]) => name === "vecinosapp_theme");
+  return cookie?.[1] === "dark" || cookie?.[1] === "light" ? cookie[1] : null;
+}
+
 app.set("view engine", "ejs");
 app.set("views", path.join(rootDir, "views"));
 app.disable("x-powered-by");
@@ -49,6 +58,7 @@ app.use(async (req, res, next) => {
   res.locals.consumption = formatMilliUnits;
   res.locals.statusClass = statusClass;
   res.locals.assetVersion = assetVersion;
+  res.locals.publicTheme = readThemeCookie(req);
   res.locals.currentUser = null;
   res.locals.isSuperAdmin = false;
   next();
@@ -64,6 +74,7 @@ app.use(async (req, res, next) => {
     ]);
   }
   res.locals.currentUser = req.currentUser;
+  if (!res.locals.publicTheme && req.currentUser?.theme) res.locals.publicTheme = req.currentUser.theme;
   res.locals.isSuperAdmin = isSuperAdmin(req.currentUser);
   res.locals.hasPermission = (permissionKey) => hasPermission(req.currentUser, permissionKey);
   next();
