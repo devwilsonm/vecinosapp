@@ -149,5 +149,4 @@ async function clearApiLogs() {
   try { logDatabase.run("DELETE FROM sqlite_sequence WHERE name = 'api_logs'"); } catch { /* Table may be empty. */ }
   saveLogDb();
 }
-
 module.exports = { apiLogSummary, clearApiLogs, countApiLogs, initLogDb, listApiLogs, writeApiLog };
