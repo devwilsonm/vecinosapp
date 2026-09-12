@@ -31,6 +31,9 @@ async function allocationsByFloor(receiptId) {
 router.get("/allocations/:token", async (req, res) => {
   const link = await publicAllocationRepository.findLinkByToken(req.params.token);
   if (!link) return res.status(404).render("error", { title: "Enlace no válido", message: "El enlace público no existe o ya no está disponible." });
+  if (publicAllocationRepository.isLinkExpired(link)) {
+    return res.status(404).render("error", { title: "Enlace expirado", message: "El enlace público expiró. Solicita uno nuevo." });
+  }
 
   const receipt = await publicAllocationRepository.findReceipt(link.receipt_id);
   if (!receipt) return res.status(404).render("error", { title: "No encontrado", message: "El prorrateo ya no está disponible." });
