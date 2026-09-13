@@ -3,16 +3,45 @@ import type { DatabasePort } from "../../domain/ports/database";
 export class SqlReceiptRepository {
   constructor(private readonly database: DatabasePort) {}
 
-  listAccessible(canAccessAll: boolean, buildingIds: number[]) {
+  listAccessible(canAccessAll: boolean, buildingIds: number[], filters: Record<string, any> = {}) {
     if (!canAccessAll && !buildingIds.length) return Promise.resolve([]);
-    const filter = canAccessAll ? "" : ` WHERE r.building_id IN (${buildingIds.map(() => "?").join(",")})`;
-    const params = canAccessAll ? [] : buildingIds;
+    const conditions = [];
+    const params = [];
+    if (!canAccessAll) {
+      conditions.push(`r.building_id IN (${buildingIds.map(() => "?").join(",")})`);
+      params.push(...buildingIds);
+    }
+    if (filters.buildingId) {
+      conditions.push("r.building_id = ?");
+      params.push(filters.buildingId);
+    }
+    if (filters.serviceType) {
+      conditions.push("r.service_type = ?");
+      params.push(filters.serviceType);
+    }
+    if (filters.year) {
+      conditions.push("r.issue_date >= ?", "r.issue_date < ?");
+      params.push(`${filters.year}-01-01`, `${Number(filters.year) + 1}-01-01`);
+    }
+    const filter = conditions.length ? ` WHERE ${conditions.join(" AND ")}` : "";
     return this.database.prepare(`
       SELECT r.*, b.name AS building_name
       FROM receipts r
       LEFT JOIN buildings b ON r.building_id = b.id
       ${filter}
       ORDER BY r.due_date DESC, r.id DESC
+    `).all(...params);
+  }
+
+  listAccessibleYears(canAccessAll: boolean, buildingIds: number[]) {
+    if (!canAccessAll && !buildingIds.length) return Promise.resolve([]);
+    const filter = canAccessAll ? "" : ` WHERE r.building_id IN (${buildingIds.map(() => "?").join(",")})`;
+    const params = canAccessAll ? [] : buildingIds;
+    return this.database.prepare(`
+      SELECT DISTINCT CAST(SUBSTR(r.issue_date, 1, 4) AS INTEGER) AS year
+      FROM receipts r
+      ${filter}
+      ORDER BY year DESC
     `).all(...params);
   }
 

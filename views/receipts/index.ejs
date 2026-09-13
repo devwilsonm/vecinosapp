@@ -1,21 +1,68 @@
 <%- include("../partials/header", { title: "Recibos | VecinosApp" }) %>
 <section class="page-head"><h1>Recibos</h1><a class="button" href="/receipts/new">Nuevo recibo</a></section>
-<table class="mobile-cards">
-  <thead><tr><th>Edificio</th><th>Servicio</th><th>Número</th><th>Periodo</th><th>Vence</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>
-  <tbody>
-    <% receipts.forEach((receipt) => { %>
-      <tr>
-        <td data-label="Edificio"><%= receipt.building_name || "-" %></td><td data-label="Servicio"><%= receipt.service_type %></td><td data-label="Número"><%= receipt.receipt_number %></td><td data-label="Periodo"><%= receipt.period %></td><td data-label="Vence"><%= receipt.due_date %></td>
-        <td data-label="Total">S/ <%= money(receipt.total_amount_cents) %></td><td data-label="Estado"><span class="badge status-badge <%= statusClass(receipt.status) %>"><%= receipt.status %></span></td>
-        <td class="actions" data-label="Acciones">
-          <a class="icon-action" href="/receipts/<%= receipt.id %>" title="Ver recibo" aria-label="Ver recibo"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path><circle cx="12" cy="12" r="2.5"></circle></svg></a>
-          <a class="icon-action" href="/receipts/<%= receipt.id %>/edit" title="Editar recibo" aria-label="Editar recibo"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></a>
-          <a class="icon-action" href="/receipts/<%= receipt.id %>/duplicate" title="Duplicar recibo" aria-label="Duplicar recibo"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="1"></rect><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"></path></svg></a>
-          <a class="icon-action" href="/allocations/receipt/<%= receipt.id %>" title="Gestionar prorrateo" aria-label="Gestionar prorrateo"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="1.5"></circle><circle cx="12" cy="16" r="1.5"></circle><path d="M6 12h12"></path></svg></a>
-        </td>
-      </tr>
+<form class="receipt-filters" method="get" action="/receipts">
+  <label>A&ntilde;o
+    <select name="year">
+      <% years.forEach((year) => { %>
+        <option value="<%= year %>" <%= String(selectedYear) === String(year) ? "selected" : "" %>><%= year %></option>
+      <% }) %>
+      <option value="all" <%= selectedYear === "all" ? "selected" : "" %>>Todos los a&ntilde;os</option>
+    </select>
+  </label>
+  <label>Servicio
+    <select name="service_type">
+      <option value="all" <%= selectedService === "all" ? "selected" : "" %>>Todos los servicios</option>
+      <% [{ value: "agua", label: "Agua" }, { value: "luz", label: "Luz" }, { value: "internet", label: "Internet" }, { value: "otro", label: "Otro" }].forEach((service) => { %>
+        <option value="<%= service.value %>" <%= selectedService === service.value ? "selected" : "" %>><%= service.label %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label>Edificio
+    <select name="building_id">
+      <option value="0">Todos los edificios</option>
+      <% buildings.forEach((building) => { %>
+        <option value="<%= building.id %>" <%= Number(selectedBuildingId) === Number(building.id) ? "selected" : "" %>><%= building.name %></option>
+      <% }) %>
+    </select>
+  </label>
+  <div class="receipt-filters-actions">
+    <button class="button" type="submit">Filtrar</button>
+    <a href="/receipts">Restablecer</a>
+  </div>
+</form>
+<div class="receipt-results-meta"><span><strong><%= receiptCount %></strong> recibos encontrados</span></div>
+<% if (receiptsByService.length) { %>
+  <div class="receipt-service-list">
+    <% receiptsByService.forEach((group) => { %>
+      <section class="receipt-service-group">
+        <div class="receipt-service-head">
+          <div>
+            <h2><%= group.label %></h2>
+            <span class="receipt-service-count"><%= group.receipts.length %> recibo<%= group.receipts.length === 1 ? "" : "s" %></span>
+          </div>
+          <strong>S/ <%= money(group.total_amount_cents) %></strong>
+        </div>
+        <table class="mobile-cards">
+          <thead><tr><th>Edificio</th><th>Servicio</th><th>N&uacute;mero</th><th>Periodo</th><th>Vence</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody>
+            <% group.receipts.forEach((receipt) => { %>
+              <tr>
+                <td data-label="Edificio"><%= receipt.building_name || "-" %></td><td data-label="Servicio"><%= receipt.service_type %></td><td data-label="N&uacute;mero"><%= receipt.receipt_number %></td><td data-label="Periodo"><%= receipt.period %></td><td data-label="Vence"><%= receipt.due_date %></td>
+                <td data-label="Total">S/ <%= money(receipt.total_amount_cents) %></td><td data-label="Estado"><span class="badge status-badge <%= statusClass(receipt.status) %>"><%= receipt.status %></span></td>
+                <td class="actions" data-label="Acciones">
+                  <a class="icon-action" href="/receipts/<%= receipt.id %>" title="Ver recibo" aria-label="Ver recibo"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path><circle cx="12" cy="12" r="2.5"></circle></svg></a>
+                  <a class="icon-action" href="/receipts/<%= receipt.id %>/edit" title="Editar recibo" aria-label="Editar recibo"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></a>
+                  <a class="icon-action" href="/receipts/<%= receipt.id %>/duplicate" title="Duplicar recibo" aria-label="Duplicar recibo"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="1"></rect><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"></path></svg></a>
+                  <a class="icon-action" href="/allocations/receipt/<%= receipt.id %>" title="Gestionar prorrateo" aria-label="Gestionar prorrateo"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="1.5"></circle><circle cx="12" cy="16" r="1.5"></circle><path d="M6 12h12"></path></svg></a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </section>
     <% }) %>
-    <% if (!receipts.length) { %><tr><td colspan="8">Sin recibos registrados.</td></tr><% } %>
-  </tbody>
-</table>
+  </div>
+<% } else { %>
+  <div class="detail">No hay recibos que coincidan con los filtros seleccionados.</div>
+<% } %>
 <%- include("../partials/footer") %>

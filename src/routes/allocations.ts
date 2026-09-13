@@ -1,11 +1,14 @@
 const express = require("express");
 const { canAccessAllBuildings, requirePermission } = require("../utils/access");
-const { ensureBuildingAccess, permittedBuildingIds } = require("../utils/buildingAccess");
+const { ensureBuildingAccess, hasBuildingAccess, permittedBuildingIds } = require("../utils/buildingAccess");
 const { toMilliUnits } = require("../utils/consumption");
 const { splitAmount } = require("../utils/money");
-const { allocationRepository, publicAllocationRepository } = require("../infrastructure/container");
+const { allocationRepository, buildingRepository, publicAllocationRepository } = require("../infrastructure/container");
 
 const router = express.Router();
+
+const serviceLabels = { agua: "Agua", luz: "Luz", internet: "Internet", otro: "Otro" };
+const serviceTypes = Object.keys(serviceLabels);
 
 type AllocationFormState = {
   selectedIds?: number[];
@@ -123,11 +126,49 @@ async function renderAllocationForm(res, receipt, state: AllocationFormState = {
 }
 
 router.get("/", async (req, res) => {
-  const receipts = await allocationRepository.listReceipts(canAccessAllBuildings(req.currentUser), permittedBuildingIds(req.currentUser));
+  const canAccessAll = canAccessAllBuildings(req.currentUser);
+  const buildingIds = permittedBuildingIds(req.currentUser);
+  const currentYear = new Date().getFullYear();
+  const requestedYear = String(req.query.year || currentYear);
+  const selectedYear = requestedYear === "all" ? "all" : /^\d{4}$/.test(requestedYear) ? Number(requestedYear) : currentYear;
+  const requestedService = String(req.query.service_type || "all");
+  const selectedService = serviceTypes.includes(requestedService) ? requestedService : "all";
+  const requestedBuildingId = Number(req.query.building_id) || 0;
+  const selectedBuildingId = requestedBuildingId && hasBuildingAccess(req.currentUser, requestedBuildingId) ? requestedBuildingId : 0;
+  const [receipts, buildings, availableYears] = await Promise.all([
+    allocationRepository.listReceipts(canAccessAll, buildingIds, {
+      buildingId: selectedBuildingId,
+      serviceType: selectedService === "all" ? "" : selectedService,
+      year: selectedYear === "all" ? 0 : selectedYear
+    }),
+    buildingRepository.listAccessible(canAccessAll, buildingIds),
+    allocationRepository.listAccessibleYears(canAccessAll, buildingIds)
+  ]);
   for (const receipt of receipts) {
     if (Number(receipt.allocation_count) > 0) receipt.sharePath = await publicSharePath(receipt.id);
   }
-  res.render("allocations/index", { receipts });
+  const years = [...new Set([currentYear, ...availableYears.map((item) => Number(item.year)).filter((year) => year > 0)])].sort((a, b) => b - a);
+  const groups = new Map();
+  receipts.forEach((receipt) => {
+    const service = serviceLabels[receipt.service_type] ? receipt.service_type : "otro";
+    let group = groups.get(service);
+    if (!group) {
+      group = { service, label: serviceLabels[service], receipts: [], total_amount_cents: 0 };
+      groups.set(service, group);
+    }
+    group.receipts.push(receipt);
+    group.total_amount_cents += Number(receipt.total_amount_cents || 0);
+  });
+  const receiptsByService = serviceTypes.filter((service) => groups.has(service)).map((service) => groups.get(service));
+  res.render("allocations/index", {
+    receiptsByService,
+    receiptCount: receipts.length,
+    buildings,
+    years,
+    selectedYear,
+    selectedService,
+    selectedBuildingId
+  });
 });
 
 router.get("/receipt/:id", async (req, res) => {

@@ -5,7 +5,8 @@ export interface AllocationData {
 }
 
 export interface AllocationRepository {
-  listReceipts(canAccessAll: boolean, buildingIds: number[]): Promise<Record<string, any>[]>;
+  listReceipts(canAccessAll: boolean, buildingIds: number[], filters?: Record<string, any>): Promise<Record<string, any>[]>;
+  listAccessibleYears(canAccessAll: boolean, buildingIds: number[]): Promise<Record<string, any>[]>;
   findReceipt(id: number | string): Promise<Record<string, any> | undefined>;
   listFormOccupants(buildingId: number, occupantIds?: number[]): Promise<Record<string, any>[]>;
   listByReceipt(id: number | string): Promise<Record<string, any>[]>;

@@ -10,6 +10,9 @@ const router = express.Router();
 
 router.use(requirePermission("receipts.manage"));
 
+const serviceLabels = { agua: "Agua", luz: "Luz", internet: "Internet", otro: "Otro" };
+const serviceTypes = Object.keys(serviceLabels);
+
 function redirectWith(res, url, message, type = "success") {
   res.redirect(`${url}?message=${encodeURIComponent(message)}&type=${type}`);
 }
@@ -52,8 +55,46 @@ async function validateReceipt(body, user, id = 0) {
 }
 
 router.get("/", async (req, res) => {
-  const receipts = await receiptRepository.listAccessible(req.currentUser.role_key === "super_admin" || req.currentUser.role_key === "admin", permittedBuildingIds(req.currentUser));
-  res.render("receipts/index", { receipts });
+  const canAccessAll = req.currentUser.role_key === "super_admin" || req.currentUser.role_key === "admin";
+  const buildingIds = permittedBuildingIds(req.currentUser);
+  const currentYear = new Date().getFullYear();
+  const requestedYear = String(req.query.year || currentYear);
+  const selectedYear = requestedYear === "all" ? "all" : /^\d{4}$/.test(requestedYear) ? Number(requestedYear) : currentYear;
+  const requestedService = String(req.query.service_type || "all");
+  const selectedService = serviceTypes.includes(requestedService) ? requestedService : "all";
+  const requestedBuildingId = Number(req.query.building_id) || 0;
+  const selectedBuildingId = requestedBuildingId && hasBuildingAccess(req.currentUser, requestedBuildingId) ? requestedBuildingId : 0;
+  const [receipts, buildings, availableYears] = await Promise.all([
+    receiptRepository.listAccessible(canAccessAll, buildingIds, {
+      buildingId: selectedBuildingId,
+      serviceType: selectedService === "all" ? "" : selectedService,
+      year: selectedYear === "all" ? 0 : selectedYear
+    }),
+    buildingRepository.listAccessible(canAccessAll, buildingIds),
+    receiptRepository.listAccessibleYears(canAccessAll, buildingIds)
+  ]);
+  const years = [...new Set([currentYear, ...availableYears.map((item) => Number(item.year)).filter((year) => year > 0)])].sort((a, b) => b - a);
+  const groups = new Map();
+  receipts.forEach((receipt) => {
+    const service = serviceLabels[receipt.service_type] ? receipt.service_type : "otro";
+    let group = groups.get(service);
+    if (!group) {
+      group = { service, label: serviceLabels[service], receipts: [], total_amount_cents: 0 };
+      groups.set(service, group);
+    }
+    group.receipts.push(receipt);
+    group.total_amount_cents += Number(receipt.total_amount_cents || 0);
+  });
+  const receiptsByService = serviceTypes.filter((service) => groups.has(service)).map((service) => groups.get(service));
+  res.render("receipts/index", {
+    receiptsByService,
+    receiptCount: receipts.length,
+    buildings,
+    years,
+    selectedYear,
+    selectedService,
+    selectedBuildingId
+  });
 });
 
 router.get("/new", async (req, res) => {
