@@ -57,7 +57,7 @@
               <span>Saldo S/ <%= money(floor.balance_cents) %></span>
             </span>
           </summary>
-          <table class="compact-table mobile-cards public-allocation-table">
+          <table class="compact-table mobile-cards allocation-table public-allocation-table">
             <thead><tr><th>Unidad</th><th>Ocupante</th><th>Consumo</th><th>Asignado</th><th>Pagado</th><th>Saldo</th><th>Estado</th></tr></thead>
             <tbody>
               <% floor.allocations.forEach((allocation) => { %>
