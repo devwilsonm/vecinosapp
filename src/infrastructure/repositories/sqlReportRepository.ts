@@ -53,6 +53,25 @@ export class SqlReportRepository implements ReportRepository {
       ORDER BY r.created_at DESC
     `).all(...access.params);
   }
+
+  consumptionByMonth(canAccessAll: boolean, buildingIds: number[], filters: Record<string, any>) {
+    const access = this.access(canAccessAll, buildingIds, "r.building_id");
+    const params = [filters.from, filters.to];
+    const serviceFilter = filters.serviceType ? " AND r.service_type = ?" : "";
+    const buildingFilter = filters.buildingId ? " AND r.building_id = ?" : "";
+    if (filters.serviceType) params.push(filters.serviceType);
+    if (filters.buildingId) params.push(filters.buildingId);
+    params.push(...access.params);
+    return this.database.prepare(`
+      SELECT r.service_type, MAX(r.consumption_unit) AS consumption_unit,
+        SUBSTR(r.issue_date, 1, 7) AS month,
+        SUM(r.consumption_total_milli) AS consumption_milli
+      FROM receipts r
+      WHERE r.issue_date >= ? AND r.issue_date < ?${serviceFilter}${buildingFilter}${access.sql}
+      GROUP BY r.service_type, SUBSTR(r.issue_date, 1, 7)
+      ORDER BY month, r.service_type
+    `).all(...params);
+  }
 }
 
 module.exports = { SqlReportRepository };

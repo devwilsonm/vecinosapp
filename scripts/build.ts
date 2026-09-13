@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
+const esbuild = require("esbuild");
 
 const root = path.join(__dirname, "..");
 const dist = path.join(root, "dist");
@@ -114,6 +115,14 @@ execFileSync(process.execPath, [
   "-p",
   path.join(root, "tsconfig.browser.build.json")
 ], { stdio: "inherit" });
+
+esbuild.buildSync({
+  entryPoints: [path.join(root, "public", "js", "consumption-chart.ts")],
+  bundle: true,
+  format: "iife",
+  minify: true,
+  outfile: path.join(dist, "public", "js", "consumption-chart.js")
+});
 
 const browserJsPath = path.join(dist, "public", "js", "main.js");
 if (fs.existsSync(browserJsPath)) {

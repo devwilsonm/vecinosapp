@@ -15,6 +15,7 @@ function applyTheme(theme) {
     button.setAttribute("aria-label", label);
     button.setAttribute("title", label);
   });
+  document.dispatchEvent(new CustomEvent("vecinosapp:theme-changed", { detail: { theme: isDark ? "dark" : "light" } }));
 }
 
 let savedTheme = themeRoot.dataset.theme === "dark" ? "dark" : "light";

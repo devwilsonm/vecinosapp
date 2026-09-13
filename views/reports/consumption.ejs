@@ -1,0 +1,52 @@
+<%- include("../partials/header", { title: "Reportes por consumo | VecinosApp" }) %>
+<section class="page-head"><h1>Reportes por consumo</h1><a href="/reports">Volver a reportes</a></section>
+<section class="consumption-report">
+  <form class="receipt-filters consumption-filters" method="get" action="/reports/consumption">
+    <label>Desde
+      <input type="month" name="from" value="<%= selectedFrom %>">
+    </label>
+    <label>Hasta
+      <input type="month" name="to" value="<%= selectedTo %>">
+    </label>
+    <label>Servicio
+      <select name="service_type">
+        <option value="all" <%= selectedService === "all" ? "selected" : "" %>>Todos los servicios</option>
+        <% [{ value: "agua", label: "Agua" }, { value: "luz", label: "Luz" }, { value: "internet", label: "Internet" }, { value: "otro", label: "Otro" }].forEach((service) => { %>
+          <option value="<%= service.value %>" <%= selectedService === service.value ? "selected" : "" %>><%= service.label %></option>
+        <% }) %>
+      </select>
+    </label>
+    <label>Edificio
+      <select name="building_id">
+        <option value="0">Todos los edificios</option>
+        <% buildings.forEach((building) => { %>
+          <option value="<%= building.id %>" <%= Number(selectedBuildingId) === Number(building.id) ? "selected" : "" %>><%= building.name %></option>
+        <% }) %>
+      </select>
+    </label>
+    <div class="receipt-filters-actions">
+      <button class="button" type="submit">Filtrar</button>
+      <a href="/reports/consumption">Restablecer</a>
+    </div>
+  </form>
+  <% if (consumptionCharts.length) { %>
+    <div class="consumption-chart-list">
+      <% consumptionCharts.forEach((report) => { %>
+        <section class="consumption-chart-panel">
+          <div class="consumption-chart-heading">
+            <div>
+              <h2><%= report.label %></h2>
+              <span>Consumo mensual en <%= report.unit %></span>
+            </div>
+          </div>
+          <div id="consumption-chart-<%= report.service %>" class="consumption-chart" role="img" aria-label="Consumo mensual de <%= report.label %> en <%= report.unit %>"></div>
+        </section>
+      <% }) %>
+    </div>
+    <script id="consumptionReportData" type="application/json"><%- JSON.stringify(consumptionCharts) %></script>
+  <% } else { %>
+    <div class="detail">No hay consumos registrados para el intervalo seleccionado.</div>
+  <% } %>
+</section>
+<script src="/js/consumption-chart.js?v=<%= assetVersion %>" defer></script>
+<%- include("../partials/footer") %>

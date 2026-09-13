@@ -8,8 +8,8 @@
     "start": "tsx src/server.ts",
     "start:prod": "node dist/src/server.js",
     "dev": "npm run build:client && tsx watch src/server.ts",
-    "build:client": "tsc -p tsconfig.browser.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.browser.json",
+    "build:client": "tsc -p tsconfig.browser.json && esbuild public/js/consumption-chart.ts --bundle --format=iife --minify --outfile=public/js/consumption-chart.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.browser.json && tsc --noEmit -p tsconfig.browser.chart.json",
     "build": "tsx scripts/build.ts",
     "review": "tsx scripts/review.ts",
     "clear-data": "tsx scripts/clear-data.ts",
@@ -21,6 +21,7 @@
     "node": "24.x"
   },
   "dependencies": {
+    "@amcharts/amcharts5": "^5.20.5",
     "ejs": "^3.1.10",
     "express": "^4.21.2",
     "express-async-errors": "^3.1.1",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.4",
+    "esbuild": "^0.28.2",
     "tsx": "^4.23.13",
     "typescript": "^5.9.3"
   }

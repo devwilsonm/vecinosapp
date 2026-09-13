@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.browser.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true
+  },
+  "include": ["public/js/consumption-chart.ts"],
+  "exclude": ["node_modules", "dist"]
+}
