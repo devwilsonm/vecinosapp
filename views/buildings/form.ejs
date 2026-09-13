@@ -8,6 +8,6 @@
   <label class="wide">Dirección <input name="address" value="<%= building.address || "" %>"></label>
   <label class="wide">Notas <textarea name="notes"><%= building.notes || "" %></textarea></label>
   <label class="check"><input type="checkbox" name="is_active" <%= building.is_active === 0 ? "" : "checked" %>> Activo</label>
-  <div class="form-actions"><button class="button" type="submit">Guardar</button><a href="/buildings">Cancelar</a></div>
+  <div class="form-actions"><button class="button" type="submit" title="Guardar edificio"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"></path><path d="M7 4v5h8V4"></path><path d="M8 20v-6h8v6"></path></svg><span>Guardar</span></button><a href="/buildings">Cancelar</a></div>
 </form>
 <%- include("../partials/footer") %>

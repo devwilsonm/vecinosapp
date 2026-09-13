@@ -7,10 +7,19 @@ const { allocationRepository, buildingRepository, paymentRepository } = require(
 
 const router = express.Router();
 
+type MassPaymentFormState = {
+  allocationIds?: number[];
+  errors?: string[];
+  payment_date?: string;
+  payment_method?: string;
+  note?: string;
+};
+
 router.use(requirePermission("payments.manage"));
 
 function redirectWith(res, url, message, type = "success") {
-  res.redirect(`${url}?message=${encodeURIComponent(message)}&type=${type}`);
+  const separator = url.includes("?") ? "&" : "?";
+  res.redirect(`${url}${separator}message=${encodeURIComponent(message)}&type=${type}`);
 }
 
 function todayForInput() {
@@ -19,6 +28,32 @@ function todayForInput() {
   const month = String(today.getMonth() + 1).padStart(2, "0");
   const day = String(today.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function parseIds(value) {
+  return [...new Set((Array.isArray(value) ? value : value ? [value] : [])
+    .map(Number)
+    .filter((id) => Number.isInteger(id) && id > 0))];
+}
+
+async function massPaymentFormData(buildingId, floor, state: MassPaymentFormState = {}) {
+  const [building, allocations] = await Promise.all([
+    buildingRepository.findById(buildingId),
+    paymentRepository.listPendingByFloor(buildingId, floor)
+  ]);
+  const selectedIds = state.allocationIds || allocations.map((allocation) => Number(allocation.id));
+  return {
+    building,
+    floor,
+    allocations,
+    selectedIds: new Set(selectedIds),
+    errors: state.errors || [],
+    formData: {
+      payment_date: state.payment_date || todayForInput(),
+      payment_method: state.payment_method || "",
+      note: state.note || ""
+    }
+  };
 }
 
 router.get("/", async (req, res) => {
@@ -58,6 +93,15 @@ router.get("/new/:allocationId", async (req, res) => {
   });
 });
 
+router.get("/mass/new", async (req, res) => {
+  const buildingId = Number(req.query.building_id) || 0;
+  const floor = cleanText(req.query.floor, 100);
+  const building = await buildingRepository.findById(buildingId);
+  if (!building || !floor) return res.status(404).render("error", { title: "No encontrado", message: "No se encontró el edificio o piso solicitado." });
+  if (!ensureBuildingAccess(req, res, building.id)) return;
+  res.render("payments/mass-form", await massPaymentFormData(buildingId, floor));
+});
+
 router.post("/new/:allocationId", async (req, res) => {
   const allocation = await paymentRepository.findAllocation(req.params.allocationId);
   if (!allocation) return res.status(404).render("error", { title: "No encontrado", message: "Deuda no encontrada." });
@@ -83,6 +127,43 @@ router.post("/new/:allocationId", async (req, res) => {
   await allocationRepository.updateReceiptStatus(allocation.receipt_id);
   await paymentRepository.markReceiptUpdated(allocation.receipt_id, req.currentUser.id);
   redirectWith(res, "/payments", "Pago registrado correctamente.");
+});
+
+router.post("/mass", async (req, res) => {
+  const buildingId = Number(req.body.building_id) || 0;
+  const floor = cleanText(req.body.floor, 100);
+  const building = await buildingRepository.findById(buildingId);
+  if (!building || !floor) return res.status(400).render("error", { title: "Solicitud inválida", message: "El edificio y el piso son obligatorios." });
+  if (!ensureBuildingAccess(req, res, building.id)) return;
+
+  const requestedIds = parseIds(req.body.allocation_ids);
+  const pending = await paymentRepository.listPendingByFloor(buildingId, floor);
+  const selected = pending.filter((allocation) => requestedIds.includes(Number(allocation.id)));
+  const errors = [];
+  if (!selected.length) errors.push("Selecciona al menos una deuda pendiente.");
+  if (selected.length !== requestedIds.length) errors.push("Una o más deudas ya no están pendientes. Actualiza la página e inténtalo nuevamente.");
+  if (!req.body.payment_date || !isDate(req.body.payment_date)) errors.push("La fecha de pago es obligatoria y debe ser válida.");
+  if (!["efectivo", "transferencia", "yape/plin", "otro"].includes(req.body.payment_method)) errors.push("El método de pago es obligatorio.");
+
+  if (errors.length) {
+    return res.status(400).render("payments/mass-form", await massPaymentFormData(buildingId, floor, {
+      allocationIds: requestedIds,
+      payment_date: req.body.payment_date,
+      payment_method: req.body.payment_method,
+      note: req.body.note,
+      errors
+    }));
+  }
+
+  const input = selected.map((allocation) => ({
+    allocation_id: Number(allocation.id),
+    amount_cents: Number(allocation.balance_cents),
+    payment_date: req.body.payment_date,
+    payment_method: req.body.payment_method,
+    note: cleanText(req.body.note, 1000)
+  }));
+  await paymentRepository.createMany(input, req.currentUser.id);
+  redirectWith(res, `/payments?building_id=${buildingId}`, `${selected.length} pagos registrados correctamente.`);
 });
 
 module.exports = router;

@@ -32,6 +32,6 @@
   </label>
   <label>Referencia de archivo <input name="file_reference" value="<%= receipt.file_reference || "" %>"></label>
   <label>Descripción <textarea name="description"><%= receipt.description || "" %></textarea></label>
-  <div class="form-actions"><button class="button" type="submit">Guardar</button><a href="/receipts">Cancelar</a></div>
+  <div class="form-actions"><button class="button" type="submit" title="Guardar recibo"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"></path><path d="M7 4v5h8V4"></path><path d="M8 20v-6h8v6"></path></svg><span>Guardar</span></button><a href="/receipts">Cancelar</a></div>
 </form>
 <%- include("../partials/footer") %>

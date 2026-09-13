@@ -11,10 +11,10 @@
         <td><%= building.occupant_count %></td>
         <td><span class="badge <%= building.is_active ? "ok" : "muted" %>"><%= building.is_active ? "Activo" : "Inactivo" %></span></td>
         <td class="actions">
-          <a href="/buildings/<%= building.id %>">Ver pisos</a>
+          <a class="icon-action" href="/buildings/<%= building.id %>" title="Ver pisos del edificio" aria-label="Ver pisos del edificio"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V4a1 1 0 0 1 1-1h10l5 5v13"></path><path d="M15 3v5h5"></path><path d="M8 8h3"></path><path d="M8 12h3"></path><path d="M8 16h3"></path><path d="M16 21v-5h-4v5"></path></svg></a>
           <% if (hasPermission("buildings.manage")) { %>
-            <a href="/buildings/<%= building.id %>/edit">Editar</a>
-            <form method="post" action="/buildings/<%= building.id %>/deactivate"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit">Desactivar</button></form>
+            <a class="icon-action" href="/buildings/<%= building.id %>/edit" title="Editar edificio" aria-label="Editar edificio"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></a>
+            <form method="post" action="/buildings/<%= building.id %>/deactivate"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="icon-action danger" type="submit" title="Desactivar edificio" aria-label="Desactivar edificio"><svg class="action-icon action-icon-disable" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m6 6 12 12"></path></svg></button></form>
           <% } %>
         </td>
       </tr>

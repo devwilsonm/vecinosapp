@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Estado del prorrateo <%= receipt.receipt_number %> | VecinosApp</title>
+  <title>Cuotas <%= receipt.receipt_number %> | VecinosApp</title>
   <link rel="icon" href="/favicon.ico?v=<%= assetVersion %>" type="image/webp">
   <link rel="shortcut icon" href="/favicon.ico?v=<%= assetVersion %>" type="image/webp">
   <link rel="icon" type="image/webp" sizes="32x32" href="/favicon/favicon-32x32.webp">
@@ -28,7 +28,7 @@
 <main class="container public-container">
 <div id="publicAllocationView" class="allocation-share-view public-share-view">
   <section class="page-head public-page-head">
-    <h1>Estado del prorrateo</h1>
+    <h1>Cuotas</h1>
     <span class="badge muted">Solo lectura</span>
   </section>
   <div class="detail public-summary-card">
@@ -43,7 +43,7 @@
       <p class="public-consumption"><span>Consumo total</span><strong><%= consumption(receipt.consumption_total_milli) %> <%= receipt.consumption_unit || "" %></strong></p>
     <% } %>
   </div>
-  <h2>Prorrateo actual</h2>
+  <h2>Detalle de cuotas</h2>
   <% if (allocationsByFloor.length) { %>
     <div class="accordion-list">
       <% allocationsByFloor.forEach((floor) => { %>
@@ -77,13 +77,19 @@
       <% }) %>
     </div>
   <% } else { %>
-    <div class="detail">Este recibo aún no fue prorrateado.</div>
+    <div class="detail">Aún no hay cuotas disponibles para este recibo.</div>
   <% } %>
 </div>
-<div class="share-toolbar public-share-actions" data-share-path="<%= sharePath %>" data-share-title="Estado del prorrateo <%= receipt.receipt_number %>">
-  <button class="button" type="button" data-share-native>Compartir</button>
-  <button class="button secondary" type="button" data-share-whatsapp>WhatsApp</button>
-  <button class="button secondary" type="button" data-capture-target="publicAllocationView">Capturar y compartir</button>
+<div class="share-toolbar public-share-actions" data-share-path="<%= sharePath %>" data-share-title="Cuotas del recibo <%= receipt.receipt_number %>">
+  <button class="button icon-action share-action" type="button" data-share-native title="Compartir cuotas" aria-label="Compartir cuotas">
+    <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"></path><path d="m7 8 5-5 5 5"></path><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"></path></svg>
+  </button>
+  <button class="button secondary icon-action share-action" type="button" data-share-whatsapp title="Enviar cuotas por WhatsApp" aria-label="Enviar cuotas por WhatsApp">
+    <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.1A8 8 0 1 1 20 11.5Z"></path><path d="M8.5 8.5c.4 2.2 1.8 4.1 4 5.1l1.4-1.2 1.8.8"></path></svg>
+  </button>
+  <button class="button secondary icon-action share-action" type="button" data-capture-target="publicAllocationView" title="Capturar cuotas como imagen" aria-label="Capturar cuotas como imagen">
+    <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
+  </button>
   <span class="share-status" data-share-status role="status" aria-live="polite"></span>
 </div>
 </main>

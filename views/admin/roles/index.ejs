@@ -23,7 +23,7 @@
         <td><%= role.permission_count %></td>
         <td><span class="badge <%= role.is_system ? "ok" : "muted" %>"><%= role.is_system ? "Sistema" : "Personalizado" %></span></td>
         <td><span class="badge <%= role.is_active ? "ok" : "muted" %>"><%= role.is_active ? "Activo" : "Inactivo" %></span></td>
-        <td class="actions"><a href="/admin/roles/<%= role.id %>/edit">Editar</a></td>
+        <td class="actions"><a class="icon-action" href="/admin/roles/<%= role.id %>/edit" title="Editar perfil" aria-label="Editar perfil"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></a></td>
       </tr>
     <% }) %>
   </tbody>

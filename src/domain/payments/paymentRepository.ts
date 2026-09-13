@@ -8,9 +8,11 @@ export interface PaymentInput {
 
 export interface PaymentRepository {
   listPendingByBuilding(buildingId: number): Promise<Record<string, any>[]>;
+  listPendingByFloor(buildingId: number, floor: string): Promise<Record<string, any>[]>;
   listByBuilding(buildingId: number): Promise<Record<string, any>[]>;
   findAllocation(id: number | string): Promise<Record<string, any> | undefined>;
   create(input: PaymentInput, actorId: number): Promise<number>;
+  createMany(inputs: PaymentInput[], actorId: number): Promise<void>;
   markAllocationUpdated(id: number | string, actorId: number): Promise<void>;
   markReceiptUpdated(id: number | string, actorId: number): Promise<void>;
 }
