@@ -1,5 +1,6 @@
 const express = require("express");
-const { publicAllocationRepository } = require("../infrastructure/container");
+const { buildingRepository, publicAllocationRepository, publicReportRepository, reportRepository } = require("../infrastructure/container");
+const { buildConsumptionCharts, nextMonth, serviceLabels, serviceTypes, serviceUnits } = require("../domain/reports/consumptionReport");
 
 const router = express.Router();
 
@@ -43,6 +44,47 @@ router.get("/allocations/:token", async (req, res) => {
     receipt,
     allocationsByFloor: await allocationsByFloor(receipt.id),
     sharePath: req.originalUrl
+  });
+});
+
+router.get("/reports/consumption/:token", async (req, res) => {
+  const token = String(req.params.token || "");
+  if (!/^[a-f0-9]{64}$/.test(token)) return res.status(404).render("error", { title: "Enlace no válido", message: "El enlace público no existe o ya no está disponible." });
+  const link = await publicReportRepository.findLinkByToken(token);
+  if (!link) return res.status(404).render("error", { title: "Enlace no válido", message: "El enlace público no existe o ya no está disponible." });
+  if (publicReportRepository.isLinkExpired(link)) {
+    return res.status(404).render("error", { title: "Enlace expirado", message: "El enlace público expiró. Solicita uno nuevo." });
+  }
+
+  let buildingIds = [];
+  try {
+    buildingIds = JSON.parse(String(link.building_ids || "[]"))
+      .map(Number)
+      .filter((id, index, ids) => Number.isInteger(id) && id > 0 && ids.indexOf(id) === index);
+  } catch {
+    return res.status(404).render("error", { title: "Enlace no válido", message: "El enlace público no existe o ya no está disponible." });
+  }
+  const serviceType = serviceTypes.includes(String(link.service_type)) ? String(link.service_type) : "all";
+  const [rows, buildings] = await Promise.all([
+    reportRepository.consumptionByMonth(false, buildingIds, {
+      from: `${link.from_month}-01`,
+      to: `${nextMonth(link.to_month)}-01`,
+      serviceType: serviceType === "all" ? "" : serviceType,
+      buildingId: 0
+    }),
+    buildingRepository.listAccessible(false, buildingIds)
+  ]);
+  const expiresAt = new Date(link.expires_at);
+  res.setHeader("Cache-Control", "no-store");
+  res.render("reports/consumption-shared", {
+    consumptionCharts: buildConsumptionCharts(rows, link.from_month, link.to_month),
+    selectedFrom: link.from_month,
+    selectedTo: link.to_month,
+    selectedService: serviceType,
+    serviceLabel: serviceType === "all" ? "Todos los servicios" : serviceLabels[serviceType],
+    serviceUnit: serviceType === "all" ? "" : serviceUnits[serviceType],
+    buildingLabel: buildings.length === 1 ? buildings[0].name : "Edificios seleccionados",
+    shareExpiresAt: Number.isNaN(expiresAt.getTime()) ? "" : expiresAt.toISOString()
   });
 });
 

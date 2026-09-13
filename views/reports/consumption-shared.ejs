@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es" data-theme="<%= publicTheme === 'dark' ? 'dark' : 'light' %>" data-authenticated="false" data-theme-server="true">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reporte público de consumo | VecinosApp</title>
+  <meta name="theme-color" content="#256f7c">
+  <link rel="stylesheet" href="/css/styles.css?v=<%= assetVersion %>">
+</head>
+<body class="public-body">
+<header class="public-topbar">
+  <div class="public-topbar-inner">
+    <div class="public-brand">
+      <img src="/favicon/icon-64x64.webp" alt="" width="32" height="32">
+      <span>VecinosApp</span>
+    </div>
+    <div class="public-topbar-actions">
+      <span class="public-view-label">Consulta pública</span>
+      <button class="theme-toggle public-theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Activar tema oscuro" title="Activar tema oscuro">
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.752 15.002A9.718 9.718 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75a9.718 9.718 0 0 1 .748-3.752A9.753 9.753 0 1 0 21.752 15.002Z"></path></svg>
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>
+      </button>
+    </div>
+  </div>
+</header>
+<main class="container public-container">
+  <section class="page-head public-page-head">
+    <h1>Reporte de consumo</h1>
+    <span class="badge muted">Solo lectura</span>
+  </section>
+  <div class="detail public-summary-card">
+    <div class="public-summary-grid">
+      <p><span>Periodo</span><strong><%= selectedFrom %> a <%= selectedTo %></strong></p>
+      <p><span>Servicio</span><strong><%= serviceLabel %></strong></p>
+      <p><span>Edificio</span><strong><%= buildingLabel %></strong></p>
+      <p><span>Enlace</span><strong>Válido por 24 horas</strong></p>
+    </div>
+  </div>
+  <% if (consumptionCharts.length) { %>
+    <div class="consumption-chart-list">
+      <% consumptionCharts.forEach((report) => { %>
+        <section class="consumption-chart-panel">
+          <div class="consumption-chart-heading">
+            <div>
+              <h2><%= report.label %></h2>
+              <span>Consumo mensual en <%= report.unit %></span>
+            </div>
+          </div>
+          <div id="consumption-chart-<%= report.service %>" class="consumption-chart" role="img" aria-label="Consumo mensual de <%= report.label %> en <%= report.unit %>"></div>
+        </section>
+      <% }) %>
+    </div>
+    <script id="consumptionReportData" type="application/json"><%- JSON.stringify(consumptionCharts) %></script>
+  <% } else { %>
+    <div class="detail">No hay consumos registrados para el intervalo seleccionado.</div>
+  <% } %>
+</main>
+<script src="/js/main.js?v=<%= assetVersion %>" defer></script>
+<script src="/js/consumption-chart.js?v=<%= assetVersion %>" defer></script>
+</body>
+</html>

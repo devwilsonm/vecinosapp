@@ -29,6 +29,20 @@
       <a href="/reports/consumption">Restablecer</a>
     </div>
   </form>
+  <div class="share-toolbar">
+    <form method="post" action="/reports/consumption/share" class="inline-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="from" value="<%= selectedFrom %>">
+      <input type="hidden" name="to" value="<%= selectedTo %>">
+      <input type="hidden" name="service_type" value="<%= selectedService %>">
+      <input type="hidden" name="building_id" value="<%= selectedBuildingId %>">
+      <button class="button secondary" type="submit">Generar enlace público (24 h)</button>
+    </form>
+    <% if (sharePath) { %>
+      <a class="button" href="<%= sharePath %>" target="_blank" rel="noopener">Abrir vista pública</a>
+      <span class="share-status">Enlace generado. Válido por 24 horas.</span>
+    <% } %>
+  </div>
   <% if (consumptionCharts.length) { %>
     <div class="consumption-chart-list">
       <% consumptionCharts.forEach((report) => { %>
