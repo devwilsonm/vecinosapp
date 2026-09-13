@@ -10,6 +10,7 @@ import {
   disposeChartRoots,
   getChartTheme
 } from "./charts/amcharts";
+import { servicePalettes } from "./reports/service-palettes";
 
 const dataElement = document.querySelector("#consumptionReportData");
 if (dataElement?.textContent) {
@@ -27,7 +28,8 @@ if (dataElement?.textContent) {
       name: report.label,
       xAxis,
       yAxis,
-      tooltip
+      tooltip,
+      palette: servicePalettes[report.service] || servicePalettes.otro
     });
 
     xAxis.data.setAll(report.data);

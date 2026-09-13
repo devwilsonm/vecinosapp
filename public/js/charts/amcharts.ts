@@ -3,7 +3,7 @@ import * as am5 from "@amcharts/amcharts5";
 import * as am5xy from "@amcharts/amcharts5/xy";
 import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
 
-export const chartPalette = [
+export const defaultChartPalette = [
   0x5eb6d1,
   0x658bdc,
   0x6a70d9,
@@ -107,7 +107,7 @@ export function addColumnSeries(chart, root, options) {
     colorByDataItem: true
   }));
   series.set("colors", am5.ColorSet.new(root, {
-    colors: chartPalette.map((value) => am5.color(value)),
+    colors: (options.palette || defaultChartPalette).map((value) => am5.color(value)),
     step: 1
   }));
   series.columns.template.setAll({

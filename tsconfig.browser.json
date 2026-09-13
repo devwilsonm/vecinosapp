@@ -10,5 +10,5 @@
     "skipLibCheck": true
   },
   "include": ["public/js/**/*.ts"],
-  "exclude": ["node_modules", "dist", "public/js/consumption-chart.ts", "public/js/charts/**/*.ts"]
+  "exclude": ["node_modules", "dist", "public/js/consumption-chart.ts", "public/js/charts/**/*.ts", "public/js/reports/**/*.ts"]
 }
