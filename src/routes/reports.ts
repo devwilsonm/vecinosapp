@@ -12,8 +12,7 @@ router.use(requirePermission("reports.view"));
 async function consumptionReportData(req, source = req.query, scope: Record<string, any> = {}) {
   const allBuildings = scope.allBuildings ?? canAccessAllBuildings(req.currentUser);
   const buildingIds = scope.buildingIds ?? permittedBuildingIds(req.currentUser);
-  const currentYear = new Date().getFullYear();
-  const filters = normalizeConsumptionFilters(source, currentYear, (buildingId) => allBuildings || hasBuildingAccess(req.currentUser, buildingId) || buildingIds.includes(buildingId));
+  const filters = normalizeConsumptionFilters(source, new Date(), (buildingId) => allBuildings || hasBuildingAccess(req.currentUser, buildingId) || buildingIds.includes(buildingId));
   const [consumptionRows, buildings] = await Promise.all([
     reportRepository.consumptionByMonth(allBuildings, buildingIds, {
       from: `${filters.selectedFrom}-01`,

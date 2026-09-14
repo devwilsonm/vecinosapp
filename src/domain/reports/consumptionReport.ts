@@ -12,6 +12,16 @@ export function nextMonth(month) {
   return monthNumber === 12 ? `${year + 1}-01` : `${year}-${String(monthNumber + 1).padStart(2, "0")}`;
 }
 
+function monthValue(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function defaultConsumptionRange(referenceDate = new Date()) {
+  const end = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+  const start = new Date(end.getFullYear(), end.getMonth() - 11, 1);
+  return { from: monthValue(start), to: monthValue(end) };
+}
+
 function monthRange(from, to) {
   const [fromYear, fromMonth] = from.split("-").map(Number);
   const [toYear, toMonth] = to.split("-").map(Number);
@@ -35,9 +45,10 @@ function monthLabel(month) {
     .replace(".", "");
 }
 
-export function normalizeConsumptionFilters(source, currentYear, buildingAllowed) {
-  const defaultFrom = `${currentYear}-01`;
-  const defaultTo = `${currentYear}-12`;
+export function normalizeConsumptionFilters(source, referenceDate, buildingAllowed) {
+  const defaultRange = defaultConsumptionRange(referenceDate);
+  const defaultFrom = defaultRange.from;
+  const defaultTo = defaultRange.to;
   let selectedFrom = validMonth(source.from, defaultFrom);
   let selectedTo = validMonth(source.to, defaultTo);
   if (selectedFrom > selectedTo) [selectedFrom, selectedTo] = [selectedTo, selectedFrom];
@@ -71,4 +82,4 @@ export function buildConsumptionCharts(rows, selectedFrom, selectedTo) {
   });
 }
 
-module.exports = { buildConsumptionCharts, nextMonth, normalizeConsumptionFilters, serviceLabels, serviceTypes, serviceUnits };
+module.exports = { buildConsumptionCharts, defaultConsumptionRange, nextMonth, normalizeConsumptionFilters, serviceLabels, serviceTypes, serviceUnits };
