@@ -1,13 +1,18 @@
 const express = require("express");
 const { hashPassword } = require("../utils/auth");
-const { requireSuperAdmin } = require("../utils/access");
+const { requirePublicLinkSettingsAccess, requireSuperAdmin } = require("../utils/access");
 const { cleanText } = require("../utils/validation");
 const { apiLogSummary, countApiLogs, listApiLogs } = require("../infrastructure/database/logDatabase");
-const { buildingRepository, roleRepository, userRepository } = require("../infrastructure/container");
+const { buildingRepository, publicLinkSettingsRepository, roleRepository, userRepository } = require("../infrastructure/container");
 
 const router = express.Router();
 
-router.use(requireSuperAdmin);
+const MAX_PUBLIC_LINK_TTL_HOURS = 48;
+
+router.use((req, res, next) => {
+  if (req.path.startsWith("/public-links")) return requirePublicLinkSettingsAccess(req, res, next);
+  return requireSuperAdmin(req, res, next);
+});
 
 function redirectWith(res, url, message, type = "success") {
   res.redirect(`${url}?message=${encodeURIComponent(message)}&type=${type}`);
@@ -28,6 +33,30 @@ async function buildingOptions() {
 
 async function permissionsByModule() {
   return roleRepository.permissionsByModule();
+}
+
+function parsePublicLinkHours(value) {
+  const text = String(value ?? "").trim();
+  if (!/^\d+$/.test(text)) return null;
+  const hours = Number(text);
+  return Number.isSafeInteger(hours) && hours >= 1 && hours <= MAX_PUBLIC_LINK_TTL_HOURS ? hours : null;
+}
+
+async function publicLinkSettingsData() {
+  const [buildings, defaultHours] = await Promise.all([
+    buildingRepository.listAllActive(),
+    publicLinkSettingsRepository.defaultHours()
+  ]);
+  return { buildings, defaultHours };
+}
+
+async function renderPublicLinkSettings(res, status = 200, state: Record<string, any> = {}) {
+  const data = await publicLinkSettingsData();
+  res.status(status).render("admin/public-links", {
+    ...data,
+    defaultHours: state.defaultHours ?? data.defaultHours,
+    errors: state.errors || []
+  });
 }
 
 router.get("/", async (req, res) => {
@@ -216,6 +245,39 @@ router.get("/permissions", async (req, res) => {
 router.get("/maintenance", async (req, res) => {
   const logs = await userRepository.maintenanceSummary();
   res.render("admin/maintenance", { logs });
+});
+
+router.get("/public-links", async (req, res) => {
+  await renderPublicLinkSettings(res);
+});
+
+router.post("/public-links/default", async (req, res) => {
+  const hours = parsePublicLinkHours(req.body.hours);
+  if (hours === null) {
+    return renderPublicLinkSettings(res, 400, {
+      defaultHours: req.body.hours,
+      errors: [`Ingresa un número entero de horas entre 1 y ${MAX_PUBLIC_LINK_TTL_HOURS}.`]
+    });
+  }
+  await publicLinkSettingsRepository.updateDefaultHours(hours);
+  redirectWith(res, "/admin/public-links", "Duración predeterminada actualizada correctamente.");
+});
+
+router.post("/public-links/buildings/:id", async (req, res) => {
+  const building = await buildingRepository.findById(req.params.id);
+  if (!building || !building.is_active) return redirectWith(res, "/admin/public-links", "El edificio no está disponible.", "danger");
+  const hours = parsePublicLinkHours(req.body.hours);
+  if (hours === null) {
+    const data = await publicLinkSettingsData();
+    const selectedBuilding = data.buildings.find((item) => Number(item.id) === Number(building.id));
+    if (selectedBuilding) selectedBuilding.public_link_ttl_hours = req.body.hours;
+    return res.status(400).render("admin/public-links", {
+      ...data,
+      errors: [`Ingresa un número entero de horas entre 1 y ${MAX_PUBLIC_LINK_TTL_HOURS}.`]
+    });
+  }
+  await buildingRepository.updatePublicLinkTtlHours(building.id, hours, req.currentUser.id);
+  redirectWith(res, "/admin/public-links", `Duración de enlaces para ${building.name} actualizada correctamente.`);
 });
 
 router.get("/logs", async (req, res) => {

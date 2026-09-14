@@ -10,6 +10,10 @@ function canAccessAllBuildings(user) {
   return isSuperAdmin(user) || hasRole(user, "admin");
 }
 
+function canManagePublicLinkSettings(user) {
+  return isSuperAdmin(user) || hasRole(user, "admin") || hasRole(user, "owner");
+}
+
 function hasPermission(user, permissionKey) {
   if (isSuperAdmin(user)) return true;
   return Array.isArray(user?.permissions) && user.permissions.includes(permissionKey);
@@ -17,6 +21,14 @@ function hasPermission(user, permissionKey) {
 
 function requireSuperAdmin(req, res, next) {
   if (isSuperAdmin(req.currentUser)) return next();
+  return res.status(403).render("error", {
+    title: "Acceso restringido",
+    message: "No tienes permisos para ingresar a esta sección."
+  });
+}
+
+function requirePublicLinkSettingsAccess(req, res, next) {
+  if (canManagePublicLinkSettings(req.currentUser)) return next();
   return res.status(403).render("error", {
     title: "Acceso restringido",
     message: "No tienes permisos para ingresar a esta sección."
@@ -33,4 +45,4 @@ function requirePermission(permissionKey) {
   };
 }
 
-module.exports = { canAccessAllBuildings, hasPermission, hasRole, isSuperAdmin, requirePermission, requireSuperAdmin };
+module.exports = { canAccessAllBuildings, canManagePublicLinkSettings, hasPermission, hasRole, isSuperAdmin, requirePermission, requirePublicLinkSettingsAccess, requireSuperAdmin };

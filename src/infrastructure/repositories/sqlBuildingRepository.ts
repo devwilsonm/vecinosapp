@@ -68,6 +68,11 @@ export class SqlBuildingRepository implements BuildingRepository {
     `).run(input.name, input.address, input.floors, input.notes, input.is_active, actorId, id);
   }
 
+  async updatePublicLinkTtlHours(id: number | string, hours: number, actorId: number) {
+    await this.database.prepare("UPDATE buildings SET public_link_ttl_hours = ?, updated_by = ? WHERE id = ?")
+      .run(hours, actorId, id);
+  }
+
   async deactivate(id: number | string, actorId: number) {
     await this.database.prepare("UPDATE buildings SET is_active = 0, updated_by = ? WHERE id = ?").run(actorId, id);
   }

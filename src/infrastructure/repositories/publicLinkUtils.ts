@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const MAX_PUBLIC_LINK_TTL_HOURS = 24;
+const MAX_PUBLIC_LINK_TTL_HOURS = 48;
 const DEFAULT_PUBLIC_LINK_TTL_HOURS = 24;
 
 function parseDate(value) {
@@ -18,12 +18,15 @@ function isPublicLinkExpired(link) {
   return baseTime + MAX_PUBLIC_LINK_TTL_HOURS * 60 * 60 * 1000 <= Date.now();
 }
 
-async function publicLinkExpiration(database) {
-  const setting = await database.prepare("SELECT value FROM app_settings WHERE key = ?").get("public_link_ttl_hours");
-  const configuredHours = Number(setting?.value);
-  const ttlHours = !Number.isFinite(configuredHours) || configuredHours <= 0
-    ? DEFAULT_PUBLIC_LINK_TTL_HOURS
-    : Math.min(configuredHours, MAX_PUBLIC_LINK_TTL_HOURS);
+async function publicLinkExpiration(database, buildingId = 0) {
+  const [buildingSetting, defaultSetting] = await Promise.all([
+    buildingId ? database.prepare("SELECT public_link_ttl_hours FROM buildings WHERE id = ?").get(buildingId) : undefined,
+    database.prepare("SELECT value FROM app_settings WHERE key = ?").get("public_link_ttl_hours")
+  ]);
+  const configuredHours = Number(buildingSetting?.public_link_ttl_hours ?? defaultSetting?.value);
+  const ttlHours = Number.isInteger(configuredHours) && configuredHours >= 1
+    ? Math.min(configuredHours, MAX_PUBLIC_LINK_TTL_HOURS)
+    : DEFAULT_PUBLIC_LINK_TTL_HOURS;
   const createdAt = new Date();
   return { createdAt, expiresAt: new Date(createdAt.getTime() + ttlHours * 60 * 60 * 1000) };
 }

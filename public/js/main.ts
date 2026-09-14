@@ -61,6 +61,36 @@ document.querySelectorAll(".confirmable").forEach((form) => {
   });
 });
 
+const roleInfoModal = document.querySelector("#roleInfoModal");
+const roleInfoOpen = document.querySelector("[data-role-info-open]");
+
+if (roleInfoModal && roleInfoOpen) {
+  const roleInfoDialog = roleInfoModal.querySelector("[role=dialog]");
+  const roleInfoClose = roleInfoModal.querySelector("[data-role-info-close].role-info-close");
+  let roleInfoPreviousFocus = null;
+
+  const closeRoleInfo = () => {
+    roleInfoModal.hidden = true;
+    document.body.classList.remove("modal-open");
+    roleInfoPreviousFocus?.focus();
+  };
+
+  const openRoleInfo = () => {
+    roleInfoPreviousFocus = document.activeElement;
+    roleInfoModal.hidden = false;
+    document.body.classList.add("modal-open");
+    roleInfoClose?.focus();
+  };
+
+  roleInfoOpen.addEventListener("click", openRoleInfo);
+  roleInfoModal.addEventListener("click", (event) => {
+    if (event.target.closest("[data-role-info-close]")) closeRoleInfo();
+  });
+  roleInfoDialog?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeRoleInfo();
+  });
+}
+
 const localDateTimeFormatter = new Intl.DateTimeFormat("es-PE", {
   year: "numeric",
   month: "2-digit",
@@ -353,8 +383,17 @@ if (allocationForm) {
     });
   });
 
+  const syncMethodSelection = () => {
+    const selectedMethod = currentMethod();
+    allocationForm.querySelectorAll('label.check.item').forEach((label) => {
+      const input = label.querySelector<HTMLInputElement>('input[name="allocation_method"]');
+      label.classList.toggle("is-selected", input?.checked === true && input.value === selectedMethod);
+    });
+  };
+
   const updateAllocationConsumption = () => {
     const method = currentMethod();
+    syncMethodSelection();
     allocationForm.classList.toggle("is-mixed", method === "mixed");
     allocationForm.querySelectorAll(".mixed-only").forEach((element) => {
       element.hidden = method !== "mixed";

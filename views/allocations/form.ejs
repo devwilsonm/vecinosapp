@@ -1,9 +1,11 @@
 <%- include("../partials/header", { title: `Prorratear ${receipt.receipt_number} | VecinosApp` }) %>
 <section class="page-head"><h1>Prorratear <%= receipt.receipt_number %></h1></section>
 <%- include("../partials/errors", { errors }) %>
-<div class="detail">
+<div class="detail allocation-receipt-summary">
+  <h2 class="allocation-receipt-summary-title">Información del recibo</h2>
   <p><strong>Edificio:</strong> <%= receipt.building_name || "-" %></p>
   <p><strong>Servicio:</strong> <%= receipt.service_type %> | <strong>Periodo:</strong> <%= receipt.period %></p>
+  <p><strong>Emisión:</strong> <%= receipt.issue_date %> | <strong>Vencimiento:</strong> <%= receipt.due_date %></p>
   <p><strong>Monto total:</strong> S/ <%= money(receipt.total_amount_cents) %></p>
   <% if (receipt.consumption_total_milli > 0) { %>
     <p><strong>Consumo total:</strong> <span id="allocationTargetConsumption"><%= consumption(receipt.consumption_total_milli) %></span> <%= receipt.consumption_unit || "" %></p>
@@ -14,16 +16,16 @@
   <div class="wide">
     <h2>Tipo de prorrateo</h2>
     <div class="check-grid">
-      <label class="check item">
+      <label class="check item <%= allocationMethod === "equal" ? "is-selected" : "" %>">
         <input type="radio" name="allocation_method" value="equal" <%= allocationMethod === "equal" ? "checked" : "" %>>
         <span>Por monto uniforme · divide el costo total entre los ocupantes seleccionados.</span>
       </label>
       <% if (receipt.consumption_total_milli > 0) { %>
-        <label class="check item">
+        <label class="check item <%= allocationMethod === "consumption" ? "is-selected" : "" %>">
           <input type="radio" name="allocation_method" value="consumption" <%= allocationMethod === "consumption" ? "checked" : "" %>>
           <span>Por consumo · calcula el costo según los <%= receipt.consumption_unit || "consumos" %> asignados.</span>
         </label>
-        <label class="check item">
+        <label class="check item <%= allocationMethod === "mixed" ? "is-selected" : "" %>">
           <input type="radio" name="allocation_method" value="mixed" <%= allocationMethod === "mixed" ? "checked" : "" %>>
           <span>Mixto · primero cobra consumos medidos y reparte el saldo restante.</span>
         </label>

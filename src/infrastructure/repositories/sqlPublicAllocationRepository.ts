@@ -22,7 +22,8 @@ export class SqlPublicAllocationRepository implements PublicAllocationRepository
     const link = await this.database.prepare("SELECT token, created_at, expires_at FROM public_allocation_links WHERE receipt_id = ?").get(receiptId);
     if (link && !this.isLinkExpired(link)) return { token: String(link.token) };
     const token = createPublicToken();
-    const { createdAt, expiresAt } = await publicLinkExpiration(this.database);
+    const receipt = await this.database.prepare("SELECT building_id FROM receipts WHERE id = ?").get(receiptId);
+    const { createdAt, expiresAt } = await publicLinkExpiration(this.database, receipt?.building_id);
     if (link) {
       await this.database.prepare("UPDATE public_allocation_links SET token = ?, created_at = ?, expires_at = ? WHERE receipt_id = ?")
         .run(token, createdAt.toISOString(), expiresAt.toISOString(), receiptId);

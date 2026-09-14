@@ -13,7 +13,13 @@
     <input type="email" name="email" value="<%= user.email || "" %>" required>
   </label>
 
-  <label>Perfil
+  <label class="user-role-field">
+    <span class="field-label-with-action">
+      <span>Perfil</span>
+      <button type="button" class="role-info-trigger" data-role-info-open title="Ver información de perfiles" aria-label="Ver información de perfiles">
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><circle cx="12" cy="7.5" r=".8" fill="currentColor" stroke="none"></circle></svg>
+      </button>
+    </span>
     <select name="role_id" required>
       <option value="">Seleccionar perfil</option>
       <% roles.forEach((role) => { %>
@@ -50,4 +56,21 @@
     <a href="/admin/users">Cancelar</a>
   </div>
 </form>
+<div class="role-info-modal" id="roleInfoModal" hidden>
+  <div class="role-info-modal-backdrop" data-role-info-close></div>
+  <section class="role-info-dialog" role="dialog" aria-modal="true" aria-labelledby="roleInfoTitle" tabindex="-1">
+    <div class="role-info-dialog-header">
+      <h2 id="roleInfoTitle">Perfiles de usuario</h2>
+      <button type="button" class="icon-action role-info-close" data-role-info-close title="Cerrar información de perfiles" aria-label="Cerrar información de perfiles">
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12"></path><path d="m18 6-12 12"></path></svg>
+      </button>
+    </div>
+    <div class="role-info-list">
+      <article class="role-info-item"><h3>Super Admin</h3><p>Acceso total a la aplicación.</p></article>
+      <article class="role-info-item"><h3>Administrador</h3><p>Administra la operación general sin mantenimiento crítico.</p></article>
+      <article class="role-info-item"><h3>Propietario</h3><p>Gestiona edificios asignados, ocupantes, pisos, recibos y pagos.</p></article>
+      <article class="role-info-item"><h3>Operador</h3><p>Registra información operativa con permisos limitados.</p></article>
+    </div>
+  </section>
+</div>
 <%- include("../../partials/footer") %>

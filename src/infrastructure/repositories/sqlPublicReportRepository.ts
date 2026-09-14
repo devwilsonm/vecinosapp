@@ -11,7 +11,9 @@ export class SqlPublicReportRepository implements PublicReportRepository {
 
   async createLink(filters: Record<string, any>) {
     const token = createPublicToken();
-    const { createdAt, expiresAt } = await publicLinkExpiration(this.database);
+    const buildingIds = Array.isArray(filters.buildingIds) ? filters.buildingIds : [];
+    const buildingId = buildingIds.length === 1 ? Number(buildingIds[0]) : 0;
+    const { createdAt, expiresAt } = await publicLinkExpiration(this.database, buildingId);
     await this.database.prepare(`
       INSERT INTO public_report_links (token, from_month, to_month, service_type, building_ids, created_at, expires_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
