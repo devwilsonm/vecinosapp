@@ -6,18 +6,22 @@
 
 <section class="detail public-link-settings-intro">
   <h2>Duración de enlaces públicos</h2>
-  <p>Configura cuánto tiempo estarán disponibles los enlaces compartidos. Solo se aceptan horas enteras entre 1 y 48.</p>
+  <p>Configura cuánto tiempo estarán disponibles los enlaces compartidos. Solo se aceptan horas enteras entre 1 y 24.</p>
   <p>Las reglas por edificio tienen prioridad sobre el valor predeterminado. Los reportes que incluyan varios edificios usan el valor predeterminado.</p>
 </section>
 
-<form method="post" action="/admin/public-links/default" class="form public-link-default-form">
-  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-  <label>Duración predeterminada (horas)
-    <input type="number" name="hours" value="<%= defaultHours %>" min="1" max="48" step="1" inputmode="numeric" required aria-describedby="publicLinkHoursHelp">
-    <span class="field-help" id="publicLinkHoursHelp">Se usa cuando no existe una regla específica para el edificio.</span>
-  </label>
-  <div class="form-actions"><button class="button" type="submit">Guardar predeterminado</button></div>
-</form>
+<% if (canManageDefaultHours) { %>
+  <form method="post" action="/admin/public-links/default" class="form public-link-default-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label>Duración predeterminada (horas)
+      <input type="number" name="hours" value="<%= defaultHours %>" min="1" max="24" step="1" inputmode="numeric" required aria-describedby="publicLinkHoursHelp">
+      <span class="field-help" id="publicLinkHoursHelp">Se usa cuando no existe una regla específica para el edificio.</span>
+    </label>
+    <div class="form-actions"><button class="button" type="submit">Guardar predeterminado</button></div>
+  </form>
+<% } else { %>
+  <p class="field-help">Solo administradores pueden cambiar la duración predeterminada.</p>
+<% } %>
 
 <div class="section-head public-link-building-heading">
   <h2>Duración por edificio</h2>
@@ -34,7 +38,7 @@
             <form method="post" action="/admin/public-links/buildings/<%= building.id %>" class="public-link-building-form">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
               <label class="sr-only" for="public-link-hours-<%= building.id %>">Horas para <%= building.name %></label>
-              <input id="public-link-hours-<%= building.id %>" type="number" name="hours" value="<%= building.public_link_ttl_hours || defaultHours %>" min="1" max="48" step="1" inputmode="numeric" required>
+              <input id="public-link-hours-<%= building.id %>" type="number" name="hours" value="<%= building.public_link_ttl_hours || defaultHours %>" min="1" max="24" step="1" inputmode="numeric" required>
               <span>horas</span>
               <button class="button" type="submit">Guardar</button>
             </form>

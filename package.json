@@ -8,7 +8,7 @@
     "start": "tsx src/server.ts",
     "start:prod": "node dist/src/server.js",
     "dev": "npm run build:client && tsx watch src/server.ts",
-    "build:client": "tsc -p tsconfig.browser.json && esbuild public/js/consumption-chart.ts --bundle --format=iife --minify --outfile=public/js/consumption-chart.js",
+    "build:client": "tsc --noEmit -p tsconfig.browser.json && tsc --noEmit -p tsconfig.browser.chart.json && esbuild public/js/main.ts --bundle --format=iife --minify --legal-comments=none --target=es2020 --outfile=public/js/main.js && esbuild public/js/consumption-chart.ts --bundle --format=iife --minify --legal-comments=none --target=es2020 --outfile=public/js/consumption-chart.js",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.browser.json && tsc --noEmit -p tsconfig.browser.chart.json",
     "build": "tsx scripts/build.ts",
     "review": "tsx scripts/review.ts",

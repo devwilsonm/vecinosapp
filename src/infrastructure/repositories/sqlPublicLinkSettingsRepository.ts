@@ -2,7 +2,7 @@ import type { DatabasePort } from "../../domain/ports/database";
 import type { PublicLinkSettingsRepository } from "../../domain/shared/publicLinkSettingsRepository";
 
 const DEFAULT_PUBLIC_LINK_TTL_HOURS = 24;
-const MAX_PUBLIC_LINK_TTL_HOURS = 48;
+const MAX_PUBLIC_LINK_TTL_HOURS = 24;
 
 function normalizeHours(value: unknown) {
   const hours = Number(value);

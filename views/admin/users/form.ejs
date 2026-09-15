@@ -29,7 +29,7 @@
   </label>
 
   <label>Contraseña <%= user.id ? "(dejar vacío para no cambiar)" : "" %>
-    <input type="password" name="password" <%= user.id ? "" : "required" %> minlength="6">
+    <input type="password" name="password" <%= user.id ? "" : "required" %> minlength="12" maxlength="128">
   </label>
 
   <label class="check">

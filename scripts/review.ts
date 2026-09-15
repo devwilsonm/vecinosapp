@@ -108,15 +108,27 @@ function checkSecurityGuards() {
   const security = read("src/utils/security.ts");
   const header = read("views/partials/header.ejs");
   const buildingAccess = read("src/utils/buildingAccess.ts");
+  const admin = read("src/routes/admin.ts");
+  const shared = read("src/routes/shared.ts");
+  const publicLinks = read("src/infrastructure/repositories/publicLinkUtils.ts");
+  const database = read("src/infrastructure/database/database.ts");
 
   addCheck("Middleware de headers de seguridad activo", server.includes("app.use(securityHeaders)"));
+  addCheck("PostgreSQL valida el certificado en produccion", database.includes("DATABASE_CA_BASE64") && database.includes("rejectUnauthorized: true") && database.includes("DATABASE_SSL=false no esta permitido"));
   addCheck("Protección CSRF activa", server.includes("app.use(csrfProtection)") && security.includes("csrfProtection"));
   addCheck("CSRF firmado por cliente", security.includes("vecinosapp_csrf") && security.includes("timingSafeEqual") && security.includes("HttpOnly"));
   addCheck("Rate limit activo", server.includes("rateLimit({ max: 240") && server.includes("mutationsOnly: true"));
   addCheck("Guard de login en rutas internas", server.includes("if (req.currentUser) return next();"));
   addCheck("Cookie de sesión HttpOnly", auth.includes("HttpOnly"));
   addCheck("Cookie de sesión SameSite=Lax", auth.includes("SameSite=Lax"));
-  addCheck("Cookie Secure activable por variable", auth.includes("COOKIE_SECURE"));
+  addCheck("Secretos sin fallback inseguro en producción", auth.includes('NODE_ENV === "production"') && security.includes('NODE_ENV === "production"'));
+  addCheck("Sesión expira en 20 minutos", auth.includes("const MAX_AGE_SECONDS = 60 * 20"));
+  addCheck("Cookie Secure forzada en producción", auth.includes('process.env.NODE_ENV === "production"') && security.includes('process.env.NODE_ENV === "production"'));
+  addCheck("Proxy de producción configurado para IP/rate limit", server.includes('app.set("trust proxy", 1)'));
+  addCheck("HSTS activo en producción", security.includes("Strict-Transport-Security"));
+  addCheck("Propietarios limitados a edificios asignados en enlaces", admin.includes("listActive(canAccessAllBuildings(user)") && admin.includes("ensureBuildingAccess(req, res, building.id)") && admin.includes("!canAccessAllBuildings(req.currentUser)"));
+  addCheck("Política de contraseñas fortalecida", admin.includes("password.length < 12") && admin.includes("password.length > 128") && read("views/admin/users/form.ejs").includes('minlength="12"'));
+  addCheck("Enlaces públicos excluidos de buscadores", shared.includes("X-Robots-Tag") && publicLinks.includes("const MAX_PUBLIC_LINK_TTL_HOURS = 24"));
   addCheck("Logout usa CSRF", header.includes('action="/logout"') && header.includes('name="_csrf"'));
   addCheck("Auditoría excluye rutas técnicas", server.includes("shouldAuditRequest") && server.includes("/favicon/") && server.includes("/.well-known/"));
   addCheck("Auditoría guarda acción y mensaje", read("src/logDb.js").includes("action TEXT") && read("src/logDb.js").includes("message TEXT"));
@@ -222,8 +234,8 @@ function checkPerformance() {
   addCheck("Assets con cache en producción", server.includes("maxAge: isProduction") && server.includes("Cache-Control"));
   addCheck("Assets versionados por build", server.includes("assetVersion") && build.includes("assetVersion") && header.includes("?v=<%= assetVersion %>") && footer.includes("?v=<%= assetVersion %>"));
   addCheck("JavaScript compilado con defer", footer.includes('src="/js/main.js?v=<%= assetVersion %>" defer'));
-  addCheck("Build minifica CSS", build.includes("function minifyCss"));
-  addCheck("Build minifica JS", build.includes("function minifyJs"));
+  addCheck("Build minifica CSS con esbuild", build.includes("function minifyCss") && build.includes('loader: "css"'));
+  addCheck("Build procesa todos los JavaScript con esbuild", build.includes("function minifyJavaScriptFiles") && build.includes("esbuild.transformSync") && build.includes('path.join(root, "public", "js", "main.ts")'));
   addCheck("Cache de páginas separado por usuario", cache.includes("req.currentUser?.id"));
 }
 

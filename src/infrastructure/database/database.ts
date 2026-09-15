@@ -21,11 +21,34 @@ function postgresSql(sql) {
   return sql.replace(/\?/g, () => `$${++index}`);
 }
 
+function postgresSslConfig() {
+  if (process.env.NODE_ENV !== "production") {
+    return process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false };
+  }
+  if (process.env.DATABASE_SSL === "false") {
+    throw new Error("DATABASE_SSL=false no esta permitido en produccion.");
+  }
+  const encodedCa = process.env.DATABASE_CA_BASE64?.trim();
+  if (!encodedCa) {
+    throw new Error("DATABASE_CA_BASE64 es obligatorio para PostgreSQL en produccion.");
+  }
+  let ca;
+  try {
+    ca = Buffer.from(encodedCa, "base64").toString("utf8");
+  } catch {
+    throw new Error("DATABASE_CA_BASE64 no es valido.");
+  }
+  if (!ca.includes("-----BEGIN CERTIFICATE-----") || !ca.includes("-----END CERTIFICATE-----")) {
+    throw new Error("DATABASE_CA_BASE64 no contiene un certificado PEM valido.");
+  }
+  return { rejectUnauthorized: true, ca };
+}
+
 function postgresClient() {
   if (!pgPool) {
     pgPool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false },
+      ssl: postgresSslConfig(),
       max: Number(process.env.DATABASE_POOL_MAX) || 5
     });
   }

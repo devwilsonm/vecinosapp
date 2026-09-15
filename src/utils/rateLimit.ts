@@ -4,17 +4,23 @@ function clientKey(req) {
   return req.ip || req.socket?.remoteAddress || "local";
 }
 
-function rateLimit({ max = 120, windowMs = 60_000, mutationsOnly = false } = {}) {
+function rateLimit({ max = 120, windowMs = 60_000, mutationsOnly = false, keyGenerator = clientKey } = {}) {
   return (req, res, next) => {
     if (mutationsOnly && ["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
 
     const now = Date.now();
-    const key = `${clientKey(req)}:${mutationsOnly ? "mutate" : "read"}`;
+    const key = `${keyGenerator(req)}:${mutationsOnly ? "mutate" : "read"}`;
     const bucket = buckets.get(key) || { count: 0, resetAt: now + windowMs };
 
     if (bucket.resetAt <= now) {
       bucket.count = 0;
       bucket.resetAt = now + windowMs;
+    }
+
+    if (buckets.size > 1000) {
+      for (const [bucketKey, value] of buckets) {
+        if (value.resetAt <= now) buckets.delete(bucketKey);
+      }
     }
 
     bucket.count += 1;

@@ -1,7 +1,0 @@
-{
-  "extends": "./tsconfig.browser.json",
-  "compilerOptions": {
-    "outDir": "dist/public/js"
-  },
-  "exclude": ["public/js/consumption-chart.ts", "public/js/charts/**/*.ts", "public/js/reports/**/*.ts"]
-}

@@ -30,6 +30,7 @@ if not exist "dist\instance\vecinosapp.sqlite" (
 )
 
 set NODE_ENV=production
+set LOCAL_HTTP=true
 set PORT=4000
 set DATABASE_PATH=%CD%\instance\vecinosapp.sqlite
 set LOG_DATABASE_PATH=%CD%\instance\vecinosapp_logs.sqlite

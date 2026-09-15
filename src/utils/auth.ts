@@ -1,8 +1,10 @@
 const crypto = require("crypto");
 
 const COOKIE_NAME = "vecinosapp_session";
-const SECRET = process.env.SESSION_SECRET || "vecinosapp-local-session-secret-change-me";
-const MAX_AGE_SECONDS = 60 * 60 * 8;
+const SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === "production"
+  ? (() => { throw new Error("SESSION_SECRET es obligatorio en producción."); })()
+  : "vecinosapp-local-session-secret-change-me");
+const MAX_AGE_SECONDS = 60 * 20;
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
   const hash = crypto.pbkdf2Sync(String(password), salt, 120000, 32, "sha256").toString("hex");
@@ -25,9 +27,13 @@ function parseCookies(header = "") {
   return header.split(";").reduce((cookies, part) => {
     const [rawName, ...rawValue] = part.trim().split("=");
     if (!rawName) return cookies;
-    cookies[rawName] = decodeURIComponent(rawValue.join("="));
+    try {
+      cookies[rawName] = decodeURIComponent(rawValue.join("="));
+    } catch {
+      cookies[rawName] = "";
+    }
     return cookies;
-  }, {});
+  }, Object.create(null));
 }
 
 function createSessionCookie(userId) {
@@ -40,8 +46,11 @@ function readSession(req) {
   const cookies = parseCookies(req.headers.cookie || "");
   const token = cookies[COOKIE_NAME];
   if (!token || !token.includes(".")) return null;
-  const [encoded, signature] = token.split(".");
-  if (signature !== sign(encoded)) return null;
+  const parts = token.split(".");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+  const [encoded, signature] = parts;
+  const expectedSignature = sign(encoded);
+  if (signature.length !== expectedSignature.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) return null;
   try {
     const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
     if (!payload.userId) return null;
@@ -54,7 +63,7 @@ function readSession(req) {
 
 function setSession(res, userId) {
   const token = createSessionCookie(userId);
-  const secure = process.env.COOKIE_SECURE === "true" ? "; Secure" : "";
+  const secure = process.env.COOKIE_SECURE === "true" || (process.env.NODE_ENV === "production" && process.env.LOCAL_HTTP !== "true") ? "; Secure" : "";
   res.setHeader(
     "Set-Cookie",
     `${COOKIE_NAME}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${MAX_AGE_SECONDS}${secure}`
@@ -62,7 +71,7 @@ function setSession(res, userId) {
 }
 
 function clearSession(res) {
-  const secure = process.env.COOKIE_SECURE === "true" ? "; Secure" : "";
+  const secure = process.env.COOKIE_SECURE === "true" || (process.env.NODE_ENV === "production" && process.env.LOCAL_HTTP !== "true") ? "; Secure" : "";
   res.setHeader("Set-Cookie", `${COOKIE_NAME}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}`);
 }
 

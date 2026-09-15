@@ -40,6 +40,7 @@ router.get("/allocations/:token", async (req, res) => {
   if (!receipt) return res.status(404).render("error", { title: "No encontrado", message: "El prorrateo ya no está disponible." });
 
   res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
   res.render("allocations/shared", {
     receipt,
     allocationsByFloor: await allocationsByFloor(receipt.id),
@@ -76,6 +77,7 @@ router.get("/reports/consumption/:token", async (req, res) => {
   ]);
   const expiresAt = new Date(link.expires_at);
   res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
   res.render("reports/consumption-shared", {
     consumptionCharts: buildConsumptionCharts(rows, link.from_month, link.to_month),
     selectedFrom: link.from_month,

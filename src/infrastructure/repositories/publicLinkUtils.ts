@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const MAX_PUBLIC_LINK_TTL_HOURS = 48;
+const MAX_PUBLIC_LINK_TTL_HOURS = 24;
 const DEFAULT_PUBLIC_LINK_TTL_HOURS = 24;
 
 function parseDate(value) {

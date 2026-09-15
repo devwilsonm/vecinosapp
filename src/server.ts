@@ -29,6 +29,7 @@ const reportRoutes = require("./routes/reports");
 
 const app = express();
 const isProduction = process.env.NODE_ENV === "production";
+if (isProduction) app.set("trust proxy", 1);
 const buildInfoPath = path.join(rootDir, "build-info.json");
 const assetVersion = fs.existsSync(buildInfoPath)
   ? JSON.parse(fs.readFileSync(buildInfoPath, "utf8")).assetVersion

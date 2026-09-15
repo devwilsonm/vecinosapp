@@ -1,13 +1,14 @@
 const express = require("express");
 const { hashPassword } = require("../utils/auth");
-const { requirePublicLinkSettingsAccess, requireSuperAdmin } = require("../utils/access");
+const { canAccessAllBuildings, requirePublicLinkSettingsAccess, requireSuperAdmin } = require("../utils/access");
+const { ensureBuildingAccess, permittedBuildingIds } = require("../utils/buildingAccess");
 const { cleanText } = require("../utils/validation");
 const { apiLogSummary, countApiLogs, listApiLogs } = require("../infrastructure/database/logDatabase");
 const { buildingRepository, publicLinkSettingsRepository, roleRepository, userRepository } = require("../infrastructure/container");
 
 const router = express.Router();
 
-const MAX_PUBLIC_LINK_TTL_HOURS = 48;
+const MAX_PUBLIC_LINK_TTL_HOURS = 24;
 
 router.use((req, res, next) => {
   if (req.path.startsWith("/public-links")) return requirePublicLinkSettingsAccess(req, res, next);
@@ -42,19 +43,20 @@ function parsePublicLinkHours(value) {
   return Number.isSafeInteger(hours) && hours >= 1 && hours <= MAX_PUBLIC_LINK_TTL_HOURS ? hours : null;
 }
 
-async function publicLinkSettingsData() {
+async function publicLinkSettingsData(user) {
   const [buildings, defaultHours] = await Promise.all([
-    buildingRepository.listAllActive(),
+    buildingRepository.listActive(canAccessAllBuildings(user), permittedBuildingIds(user), 0),
     publicLinkSettingsRepository.defaultHours()
   ]);
   return { buildings, defaultHours };
 }
 
-async function renderPublicLinkSettings(res, status = 200, state: Record<string, any> = {}) {
-  const data = await publicLinkSettingsData();
+async function renderPublicLinkSettings(req, res, status = 200, state: Record<string, any> = {}) {
+  const data = await publicLinkSettingsData(req.currentUser);
   res.status(status).render("admin/public-links", {
     ...data,
     defaultHours: state.defaultHours ?? data.defaultHours,
+    canManageDefaultHours: canAccessAllBuildings(req.currentUser),
     errors: state.errors || []
   });
 }
@@ -91,7 +93,8 @@ router.post("/users", async (req, res) => {
   if (!cleanText(req.body.full_name, 160)) errors.push("El nombre completo es obligatorio.");
   if (!email || !email.includes("@")) errors.push("El correo electrónico es obligatorio y debe ser válido.");
   if (!role) errors.push("Selecciona un perfil activo.");
-  if (!String(req.body.password || "").trim() || String(req.body.password).length < 6) errors.push("La contraseña debe tener al menos 6 caracteres.");
+  const password = String(req.body.password || "");
+  if (!password || password.length < 12 || password.length > 128) errors.push("La contraseña debe tener entre 12 y 128 caracteres.");
   const duplicate = await userRepository.emailExists(email);
   if (duplicate) errors.push("Ya existe un usuario con ese correo.");
 
@@ -135,7 +138,7 @@ router.put("/users/:id", async (req, res) => {
   if (!cleanText(req.body.full_name, 160)) errors.push("El nombre completo es obligatorio.");
   if (!email || !email.includes("@")) errors.push("El correo electrónico es obligatorio y debe ser válido.");
   if (!role) errors.push("Selecciona un perfil activo.");
-  if (req.body.password && String(req.body.password).length < 6) errors.push("La contraseña debe tener al menos 6 caracteres.");
+  if (req.body.password && (String(req.body.password).length < 12 || String(req.body.password).length > 128)) errors.push("La contraseña debe tener entre 12 y 128 caracteres.");
   if (Number(req.params.id) === Number(req.currentUser.id) && (role?.key !== "super_admin" || !req.body.is_active)) {
     errors.push("No puedes quitarte tu propio acceso de Super Admin.");
   }
@@ -248,13 +251,14 @@ router.get("/maintenance", async (req, res) => {
 });
 
 router.get("/public-links", async (req, res) => {
-  await renderPublicLinkSettings(res);
+  await renderPublicLinkSettings(req, res);
 });
 
 router.post("/public-links/default", async (req, res) => {
+  if (!canAccessAllBuildings(req.currentUser)) return res.status(403).render("error", { title: "Acceso restringido", message: "No tienes permisos para cambiar la configuración predeterminada." });
   const hours = parsePublicLinkHours(req.body.hours);
   if (hours === null) {
-    return renderPublicLinkSettings(res, 400, {
+    return renderPublicLinkSettings(req, res, 400, {
       defaultHours: req.body.hours,
       errors: [`Ingresa un número entero de horas entre 1 y ${MAX_PUBLIC_LINK_TTL_HOURS}.`]
     });
@@ -266,13 +270,15 @@ router.post("/public-links/default", async (req, res) => {
 router.post("/public-links/buildings/:id", async (req, res) => {
   const building = await buildingRepository.findById(req.params.id);
   if (!building || !building.is_active) return redirectWith(res, "/admin/public-links", "El edificio no está disponible.", "danger");
+  if (!ensureBuildingAccess(req, res, building.id)) return;
   const hours = parsePublicLinkHours(req.body.hours);
   if (hours === null) {
-    const data = await publicLinkSettingsData();
+    const data = await publicLinkSettingsData(req.currentUser);
     const selectedBuilding = data.buildings.find((item) => Number(item.id) === Number(building.id));
     if (selectedBuilding) selectedBuilding.public_link_ttl_hours = req.body.hours;
     return res.status(400).render("admin/public-links", {
       ...data,
+      canManageDefaultHours: canAccessAllBuildings(req.currentUser),
       errors: [`Ingresa un número entero de horas entre 1 y ${MAX_PUBLIC_LINK_TTL_HOURS}.`]
     });
   }

@@ -1,16 +1,22 @@
 const express = require("express");
 const { clearSession, setSession, verifyPassword } = require("../utils/auth");
 const { invalidatePageCache } = require("../utils/cache");
+const { rateLimit } = require("../utils/rateLimit");
 const { userRepository } = require("../infrastructure/container");
 
 const router = express.Router();
+const loginRateLimit = rateLimit({
+  max: 5,
+  windowMs: 15 * 60_000,
+  keyGenerator: (req) => `${req.ip || req.socket?.remoteAddress || "local"}:${String(req.body?.email || "").trim().toLowerCase().slice(0, 160)}`
+});
 
 router.get("/login", (req, res) => {
   if (req.currentUser) return res.redirect("/");
   res.render("auth/login", { errors: [] });
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", loginRateLimit, async (req, res) => {
   const email = String(req.body.email || "").trim().toLowerCase();
   const password = String(req.body.password || "");
   req.auditUserEmail = email;

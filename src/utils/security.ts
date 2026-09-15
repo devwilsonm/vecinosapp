@@ -1,7 +1,9 @@
 const crypto = require("crypto");
 
 const CSRF_COOKIE = "vecinosapp_csrf";
-const CSRF_SECRET = process.env.CSRF_SECRET || process.env.SESSION_SECRET || "vecinosapp-local-csrf-secret-change-me";
+const CSRF_SECRET = process.env.CSRF_SECRET || process.env.SESSION_SECRET || (process.env.NODE_ENV === "production"
+  ? (() => { throw new Error("CSRF_SECRET o SESSION_SECRET es obligatorio en producción."); })()
+  : "vecinosapp-local-csrf-secret-change-me");
 
 function sign(value) {
   return crypto.createHmac("sha256", CSRF_SECRET).update(value).digest("hex");
@@ -11,9 +13,13 @@ function parseCookies(header = "") {
   return header.split(";").reduce((cookies, part) => {
     const [rawName, ...rawValue] = part.trim().split("=");
     if (!rawName) return cookies;
-    cookies[rawName] = decodeURIComponent(rawValue.join("="));
+    try {
+      cookies[rawName] = decodeURIComponent(rawValue.join("="));
+    } catch {
+      cookies[rawName] = "";
+    }
     return cookies;
-  }, {});
+  }, Object.create(null));
 }
 
 function createCsrfToken(secret) {
@@ -28,8 +34,8 @@ function verifyCsrfToken(token, secret) {
 }
 
 function csrfCookie(secret) {
-  const secure = process.env.COOKIE_SECURE === "true" ? "; Secure" : "";
-  return `${CSRF_COOKIE}=${encodeURIComponent(secret)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=28800${secure}`;
+  const secure = process.env.COOKIE_SECURE === "true" || (process.env.NODE_ENV === "production" && process.env.LOCAL_HTTP !== "true") ? "; Secure" : "";
+  return `${CSRF_COOKIE}=${encodeURIComponent(secret)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=1200${secure}`;
 }
 
 function securityHeaders(req, res, next) {
@@ -39,9 +45,10 @@ function securityHeaders(req, res, next) {
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
   res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  if (process.env.NODE_ENV === "production" && process.env.LOCAL_HTTP !== "true") res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; base-uri 'self'"
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
   );
   next();
 }

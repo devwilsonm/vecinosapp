@@ -8,9 +8,9 @@ Aplicación web para administrar edificios, ocupantes, recibos, prorrateos y pag
 - Arquitectura: capas de dominio, rutas, repositorios y adaptadores de infraestructura.
 - Base de datos: PostgreSQL en Supabase; SQLite queda disponible como respaldo local.
 - Vistas: EJS.
-- Frontend: TypeScript compilado a JavaScript, CSS propio.
+- Frontend: TypeScript procesado con esbuild, CSS propio.
 
-El código fuente de la aplicación está en TypeScript. Los archivos `.js` que aparecen en `dist/` o que se generan en `public/js/` son artefactos compilados necesarios para ejecutar Node.js y el navegador.
+El código fuente de la aplicación está en TypeScript. El código del navegador está en `public/js/**/*.ts`; esbuild genera los archivos `.js` finales que el navegador necesita. Los archivos `.js` de `public/js/` y `dist/` son artefactos generados, están ignorados por Git y no deben editarse manualmente.
 
 ## Requisitos
 
@@ -23,6 +23,7 @@ Para desarrollo con Supabase configura `DATABASE_URL` y, si corresponde, `DATABA
 
 ```text
 SESSION_SECRET=un-secreto-largo-y-aleatorio
+CSRF_SECRET=otro-secreto-largo-y-aleatorio
 COOKIE_SECURE=false
 PORT=4000
 NODE_ENV=development
@@ -38,7 +39,7 @@ npm run typecheck
 npm start
 ```
 
-La aplicación queda disponible en `http://localhost:4000` cuando `PORT=4000` está definido. `npm start` compila primero `public/js/main.ts` y luego inicia el servidor con `tsx`.
+La aplicación queda disponible en `http://localhost:4000` cuando `PORT=4000` está definido. El hook `prestart` ejecuta `npm run build:client`, que valida el TypeScript del navegador con `tsc --noEmit` y genera directamente `public/js/main.js` y `public/js/consumption-chart.js` con esbuild. Después `npm start` inicia el servidor con `tsx`.
 
 Para reiniciar automáticamente el servidor durante cambios:
 
@@ -47,6 +48,8 @@ npm run dev
 ```
 
 En Windows también puedes ejecutar `ejecutar-vecinosapp.bat`. Si `DATABASE_URL` existe, usa esa base PostgreSQL; si no existe, inicializa la base SQLite local.
+
+Los archivos JavaScript generados pueden eliminarse del workspace cuando sea necesario; se regeneran al ejecutar `npm start`, `npm run dev` o `npm run build:client`.
 
 ## Base de datos
 
@@ -74,11 +77,13 @@ npm run build
 npm run start:prod
 ```
 
-El build se genera en `dist/`. Compila el backend y el navegador, copia las vistas y assets estáticos, y minifica CSS/JavaScript. Para generar el build y levantarlo en el puerto 4000 en Windows:
+El build se genera en `dist/`. Compila el backend, valida el TypeScript del navegador sin generar archivos intermedios, genera directamente los bundles del navegador con esbuild, copia las vistas y assets estáticos, y minifica con esbuild el CSS y todo el JavaScript generado. `dist/` es un artefacto temporal ignorado por Git. Para generar el build y levantarlo en el puerto 4000 en Windows:
 
 ```powershell
 .\build-produccion-4000.bat
 ```
+
+Este script genera y ejecuta el build con `NODE_ENV=production`, pero define `LOCAL_HTTP=true` porque usa HTTP en `localhost`; el despliegue real en Azure no debe definir `LOCAL_HTTP` y debe usar cookies `Secure`.
 
 ## Publicación en Azure App Service
 
@@ -88,7 +93,9 @@ En el App Service configura como mínimo:
 
 - `DATABASE_URL`: cadena de conexión de Supabase de producción.
 - `DATABASE_SSL=true`.
+- `DATABASE_CA_BASE64`: certificado CA de Supabase codificado en Base64; es obligatorio para validar TLS en produccion.
 - `SESSION_SECRET`: secreto largo y aleatorio.
+- `CSRF_SECRET`: secreto largo y aleatorio para tokens CSRF; si no se define, se reutiliza `SESSION_SECRET`.
 - `NODE_ENV=production`.
 - `COOKIE_SECURE=true`.
 - `PORT`: Azure puede asignarlo automáticamente; no es necesario fijarlo en producción.
@@ -104,7 +111,10 @@ src/
   infrastructure/repositories/   Implementaciones SQL de los repositorios.
   routes/                         Entrada HTTP y coordinación de casos de uso.
   utils/                          Seguridad, validación, cache y utilidades.
-public/js/main.ts                 Código fuente TypeScript del navegador.
+public/js/main.ts                 Código fuente TypeScript principal del navegador.
+public/js/consumption-chart.ts    Código fuente TypeScript del gráfico y sus imports.
+public/js/charts/                  Helpers TypeScript de amCharts.
+public/js/reports/                 Paletas TypeScript de reportes.
 scripts/                          Build, migraciones, seed y revisión.
 views/                            Plantillas EJS.
 ```
@@ -116,6 +126,7 @@ views/                            Plantillas EJS.
 - Las cookies de sesión son `HttpOnly`, `SameSite=Lax` y pueden usar `Secure`.
 - Las páginas cacheadas se separan por usuario y las mutaciones invalidan el cache correspondiente.
 - Los assets de producción usan cache HTTP y una versión generada por build.
+- Las sesiones de usuario expiran después de 20 minutos; en producción las cookies se fuerzan con `Secure`.
 - La aplicación y la base de datos deben estar en regiones cercanas; si se mantienen en regiones distintas, evita cachear HTML personalizado y prioriza cachear únicamente assets públicos.
 
 ## Revisión antes de publicar

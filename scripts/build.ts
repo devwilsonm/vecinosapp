@@ -46,20 +46,32 @@ function copyPublicAssets(source, target) {
 }
 
 function minifyCss(css) {
-  return css
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/\s+/g, " ")
-    .replace(/\s*([{}:;,>])\s*/g, "$1")
-    .replace(/;}/g, "}")
-    .trim();
+  return esbuild.transformSync(css, {
+    loader: "css",
+    minify: true,
+    legalComments: "none"
+  }).code.trim();
 }
 
 function minifyJs(js) {
-  return js
-    .replace(/^\s*\/\/.*$/gm, "")
-    .replace(/\s+/g, " ")
-    .replace(/\s*([{}();,:=+<>?])\s*/g, "$1")
-    .trim();
+  return esbuild.transformSync(js, {
+    loader: "js",
+    minify: true,
+    legalComments: "none",
+    target: "es2020"
+  }).code.trim();
+}
+
+function minifyJavaScriptFiles(dir) {
+  if (!fs.existsSync(dir)) return;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const filePath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      minifyJavaScriptFiles(filePath);
+    } else if (entry.name.endsWith(".js")) {
+      fs.writeFileSync(filePath, minifyJs(fs.readFileSync(filePath, "utf8")));
+    }
+  }
 }
 
 function copyAndMinifyPublic() {
@@ -77,15 +89,6 @@ function copyAndMinifyPublic() {
     }
   }
 
-  const jsDir = path.join(publicTarget, "js");
-  if (fs.existsSync(jsDir)) {
-    for (const file of fs.readdirSync(jsDir)) {
-      if (file.endsWith(".js")) {
-        const filePath = path.join(jsDir, file);
-        fs.writeFileSync(filePath, minifyJs(fs.readFileSync(filePath, "utf8")));
-      }
-    }
-  }
 }
 
 function writeBuildInfo() {
@@ -104,30 +107,42 @@ ensureDir(dist);
 
 execFileSync(process.execPath, [path.join(root, "node_modules", "typescript", "bin", "tsc"), "-p", path.join(root, "tsconfig.json")], { stdio: "inherit" });
 
+minifyJavaScriptFiles(path.join(dist, "src"));
+
 for (const dir of copyDirs) {
   copyDir(path.join(root, dir), path.join(dist, dir));
 }
 
 copyAndMinifyPublic();
 
-execFileSync(process.execPath, [
-  path.join(root, "node_modules", "typescript", "bin", "tsc"),
-  "-p",
-  path.join(root, "tsconfig.browser.build.json")
-], { stdio: "inherit" });
+for (const config of ["tsconfig.browser.json", "tsconfig.browser.chart.json"]) {
+  execFileSync(process.execPath, [
+    path.join(root, "node_modules", "typescript", "bin", "tsc"),
+    "--noEmit",
+    "-p",
+    path.join(root, config)
+  ], { stdio: "inherit" });
+}
+
+esbuild.buildSync({
+  entryPoints: [path.join(root, "public", "js", "main.ts")],
+  bundle: true,
+  format: "iife",
+  minify: true,
+  legalComments: "none",
+  target: "es2020",
+  outfile: path.join(dist, "public", "js", "main.js")
+});
 
 esbuild.buildSync({
   entryPoints: [path.join(root, "public", "js", "consumption-chart.ts")],
   bundle: true,
   format: "iife",
   minify: true,
+  legalComments: "none",
+  target: "es2020",
   outfile: path.join(dist, "public", "js", "consumption-chart.js")
 });
-
-const browserJsPath = path.join(dist, "public", "js", "main.js");
-if (fs.existsSync(browserJsPath)) {
-  fs.writeFileSync(browserJsPath, minifyJs(fs.readFileSync(browserJsPath, "utf8")));
-}
 
 for (const file of copyFiles) {
   const source = path.join(root, file);
