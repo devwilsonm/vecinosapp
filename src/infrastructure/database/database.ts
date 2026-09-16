@@ -22,11 +22,9 @@ function postgresSql(sql) {
 }
 
 function postgresSslConfig() {
+  if (process.env.DATABASE_SSL === "false") return false;
   if (process.env.NODE_ENV !== "production") {
-    return process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false };
-  }
-  if (process.env.DATABASE_SSL === "false") {
-    throw new Error("DATABASE_SSL=false no esta permitido en produccion.");
+    return { rejectUnauthorized: false };
   }
   const encodedCa = process.env.DATABASE_CA_BASE64?.trim();
   if (!encodedCa) {

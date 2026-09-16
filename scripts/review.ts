@@ -114,7 +114,7 @@ function checkSecurityGuards() {
   const database = read("src/infrastructure/database/database.ts");
 
   addCheck("Middleware de headers de seguridad activo", server.includes("app.use(securityHeaders)"));
-  addCheck("PostgreSQL valida el certificado en produccion", database.includes("DATABASE_CA_BASE64") && database.includes("rejectUnauthorized: true") && database.includes("DATABASE_SSL=false no esta permitido"));
+  addCheck("PostgreSQL valida el certificado por defecto en produccion", database.includes("DATABASE_CA_BASE64") && database.includes("rejectUnauthorized: true") && database.includes('process.env.DATABASE_SSL === "false"'));
   addCheck("Protección CSRF activa", server.includes("app.use(csrfProtection)") && security.includes("csrfProtection"));
   addCheck("CSRF firmado por cliente", security.includes("vecinosapp_csrf") && security.includes("timingSafeEqual") && security.includes("HttpOnly"));
   addCheck("Rate limit activo", server.includes("rateLimit({ max: 240") && server.includes("mutationsOnly: true"));

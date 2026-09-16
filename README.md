@@ -92,8 +92,8 @@ La rama de publicación debe contener el código TypeScript y los archivos de co
 En el App Service configura como mínimo:
 
 - `DATABASE_URL`: cadena de conexión de Supabase de producción.
-- `DATABASE_SSL=true`.
-- `DATABASE_CA_BASE64`: certificado CA de Supabase codificado en Base64; es obligatorio para validar TLS en produccion.
+- `DATABASE_SSL=true` por defecto; `DATABASE_SSL=false` permite desactivar TLS temporalmente para diagnostico.
+- `DATABASE_CA_BASE64`: certificado CA de Supabase codificado en Base64; se usa para validar TLS en produccion cuando `DATABASE_SSL` no es `false`.
 - `SESSION_SECRET`: secreto largo y aleatorio.
 - `CSRF_SECRET`: secreto largo y aleatorio para tokens CSRF; si no se define, se reutiliza `SESSION_SECRET`.
 - `NODE_ENV=production`.
