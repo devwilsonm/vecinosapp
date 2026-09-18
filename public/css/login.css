@@ -109,11 +109,17 @@
 .login-page .messages .alert { margin: 0; overflow-wrap: anywhere; }
 
 @media (max-width: 700px) {
-.login-page .topbar { padding: 18px 20px; }
+.login-page .topbar { padding: 12px 16px; }
 
-.login-page .container { width: min(440px, calc(100% - 40px)); }
+.login-page .container { width: min(440px, calc(100% - 32px)); }
 
-.login-page .login-wrap { min-height: auto; grid-template-columns: minmax(0, 1fr); gap: 32px; padding: 28px 0 40px; }
+.login-page .login-wrap {
+  min-height: calc(100svh - 68px);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-content: center;
+  padding: 16px 0 24px;
+}
 
 .login-welcome { width: 100%; }
 
@@ -126,6 +132,53 @@
 .login-welcome p { font-size: 1rem; }
 
 .login-welcome p br { display: none; }
+}
+
+@media (max-width: 700px) and (max-height: 700px) {
+  .login-page .login-wrap {
+    min-height: calc(100svh - 68px);
+    gap: 12px;
+    padding: 8px 0 14px;
+  }
+
+  .login-welcome h2 {
+    margin-bottom: 6px;
+    font-size: clamp(1.85rem, 7vw, 2.35rem);
+  }
+
+  .login-welcome p {
+    line-height: 1.35;
+  }
+
+  .login-page .login-form {
+    padding: 20px;
+    gap: 14px;
+  }
+
+  .login-heading h1 {
+    font-size: 1.65rem;
+  }
+
+  .login-page .login-form label {
+    gap: 6px;
+  }
+
+  .login-page .login-form input {
+    min-height: 46px;
+    padding: 10px 13px;
+  }
+
+  .login-page .login-submit {
+    min-height: 48px;
+    padding: 11px 16px;
+  }
+}
+
+@media (max-width: 700px) and (max-height: 600px) {
+  .login-page .login-form {
+    padding: 16px;
+    gap: 12px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

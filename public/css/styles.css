@@ -287,18 +287,18 @@ nav a:hover { color: var(--primary-dark); }
 }
 
 .stat-info {
-  background: var(--surface-soft);
-  border-color: var(--line);
+  background: #d7e7fb;
+  border-color: #8fb4df;
 }
 
 .stat-success {
-  background: #f0faf4;
-  border-color: #b9e3c8;
+  background: #e4f6ed;
+  border-color: #93d3ae;
 }
 
 .stat-warning {
-  background: #fff8e9;
-  border-color: #efd28b;
+  background: #fff1d9;
+  border-color: #e6bd6a;
 }
 
 .stat span { display: block; color: var(--muted); margin-bottom: 8px; }
@@ -703,7 +703,7 @@ nav a:hover { color: var(--primary-dark); }
 
 .stats-grid {
     display: flex;
-    gap: 0;
+    gap: 16px;
     overflow-x: auto;
     margin-inline: -16px;
     padding: 0 16px 12px;
@@ -717,13 +717,14 @@ nav a:hover { color: var(--primary-dark); }
   }
 
 .stats-grid .stat {
-    flex: 0 0 calc(100vw - 32px);
+    flex: 0 0 100%;
+    max-width: 100%;
     min-height: 116px;
-    scroll-snap-align: start;
+    scroll-snap-align: center;
   }
 
 .stats-grid .stat + .stat {
-    margin-left: 16px;
+    margin-left: 0;
   }
 
 .stats-dots {
@@ -759,13 +760,33 @@ nav a:hover { color: var(--primary-dark); }
 }
 
 [data-theme="dark"] .stat-success {
-  background: #19362b;
-  border-color: #39745a;
+  background: #173d35;
+  border-color: #4d9f87;
+  color: #f3fff9;
 }
 
 [data-theme="dark"] .stat-warning {
-  background: #3b2d1b;
-  border-color: #80602e;
+  background: #47361e;
+  border-color: #b4833b;
+  color: #fff8e8;
+}
+
+[data-theme="dark"] .stat-info {
+  background: #193b61;
+  border-color: #4c86c5;
+  color: #f4f8ff;
+}
+
+[data-theme="dark"] .stat-info span {
+  color: #c8e1fb;
+}
+
+[data-theme="dark"] .stat-success span {
+  color: #c2ead9;
+}
+
+[data-theme="dark"] .stat-warning span {
+  color: #f6db9e;
 }
 
 [data-theme="dark"] .main-nav > .nav-link,
