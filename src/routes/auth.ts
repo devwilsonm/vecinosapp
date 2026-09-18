@@ -20,7 +20,18 @@ router.post("/login", loginRateLimit, async (req, res) => {
   const email = String(req.body.email || "").trim().toLowerCase();
   const password = String(req.body.password || "");
   req.auditUserEmail = email;
-  const user = await userRepository.findActiveByEmail(email);
+  const unavailable = () => {
+    res.setHeader("Retry-After", "30");
+    return res.status(503).render("auth/login", { errors: ["No puedes iniciar sesión en este momento porque el servicio no está disponible. Inténtalo nuevamente en unos minutos."] });
+  };
+  if (!res.locals.databaseReady) return unavailable();
+  let user;
+  try {
+    user = await userRepository.findActiveByEmail(email);
+  } catch (error) {
+    console.error("No se pudo consultar el usuario para iniciar sesión.", error?.code || "DATABASE_ERROR");
+    return unavailable();
+  }
   if (!user || !verifyPassword(password, user.password_hash)) {
     req.auditMessage = "Intento de login fallido.";
     return res.status(401).render("auth/login", { errors: ["Correo o contraseña incorrectos."] });

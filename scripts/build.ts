@@ -125,13 +125,13 @@ for (const config of ["tsconfig.browser.json", "tsconfig.browser.chart.json"]) {
 }
 
 esbuild.buildSync({
-  entryPoints: [path.join(root, "public", "js", "main.ts")],
+  entryPoints: [path.join(root, "public", "js", "main.ts"), path.join(root, "public", "js", "theme.ts"), path.join(root, "public", "js", "share.ts")],
   bundle: true,
   format: "iife",
   minify: true,
   legalComments: "none",
   target: "es2020",
-  outfile: path.join(dist, "public", "js", "main.js")
+  outdir: path.join(dist, "public", "js")
 });
 
 esbuild.buildSync({

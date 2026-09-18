@@ -1,31 +1,4 @@
-<!doctype html>
-<html lang="es" data-theme="<%= publicTheme === 'dark' ? 'dark' : 'light' %>" data-authenticated="false" data-theme-server="true">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cuotas <%= receipt.receipt_number %> | VecinosApp</title>
-  <link rel="icon" href="/favicon.ico?v=<%= assetVersion %>" type="image/webp">
-  <link rel="shortcut icon" href="/favicon.ico?v=<%= assetVersion %>" type="image/webp">
-  <link rel="icon" type="image/webp" sizes="32x32" href="/favicon/favicon-32x32.webp">
-  <link rel="stylesheet" href="/css/styles.css?v=<%= assetVersion %>">
-</head>
-<body class="public-body">
-<header class="public-topbar">
-  <div class="public-topbar-inner">
-    <div class="public-brand">
-      <img src="/favicon/icon-64x64.webp" alt="" width="32" height="32">
-      <span>VecinosApp</span>
-    </div>
-    <div class="public-topbar-actions">
-      <span class="public-view-label">Consulta pública</span>
-      <button class="theme-toggle public-theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Activar tema oscuro" title="Activar tema oscuro">
-        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.752 15.002A9.718 9.718 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75a9.718 9.718 0 0 1 .748-3.752A9.753 9.753 0 1 0 21.752 15.002Z"></path></svg>
-        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>
-      </button>
-    </div>
-  </div>
-</header>
-<main class="container public-container">
+<%- include("../partials/public-header", { title: `Cuotas ${receipt.receipt_number} | VecinosApp` }) %>
 <div id="publicAllocationView" class="allocation-share-view public-share-view">
   <section class="page-head public-page-head">
     <h1>Cuotas</h1>
@@ -93,6 +66,7 @@
   <span class="share-status" data-share-status role="status" aria-live="polite"></span>
 </div>
 </main>
-<script src="/js/main.js?v=<%= assetVersion %>" defer></script>
+<script src="/js/theme.js?v=<%= assetVersion %>" defer></script>
+<script src="/js/share.js?v=<%= assetVersion %>" defer></script>
 </body>
 </html>

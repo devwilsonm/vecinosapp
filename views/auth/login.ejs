@@ -1,12 +1,20 @@
-<%- include("../partials/header", { title: "Iniciar sesión | VecinosApp" }) %>
+<%- include("../partials/header", { title: "Iniciar sesión | VecinosApp", pageClass: "login-page" }) %>
 <section class="login-wrap">
+  <div class="login-welcome">
+    <svg class="login-leaf" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M38 8C17 6 7 17 12 30c13 7 27-3 26-22Z"/><path d="M8 40 30 18M17 31v-9M24 24h9"/></svg>
+    <h2>Tu comunidad,<br> más cerca.</h2>
+    <p>Recibos, prorrateos y pagos.<br> Todo en un mismo lugar.</p>
+  </div>
   <form method="post" action="/login" class="form login-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <h1>Iniciar sesión</h1>
+    <div class="login-heading">
+      <h1>Iniciar sesión</h1>
+      <p>Qué bueno tenerte aquí.</p>
+    </div>
     <%- include("../partials/errors", { errors }) %>
-    <label>Correo electrónico <input type="email" name="email" required autofocus></label>
-    <label>Contraseña <input type="password" name="password" required></label>
-    <div class="form-actions"><button class="button login-submit" type="submit"><span class="button-icon" aria-hidden="true">🔑</span>Entrar</button></div>
+    <label>Correo electrónico <input type="email" name="email" autocomplete="username" placeholder="tu@correo.com" required autofocus></label>
+    <label>Contraseña <input type="password" name="password" autocomplete="current-password" required></label>
+    <div class="form-actions"><button class="button login-submit" type="submit">Entrar<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div>
   </form>
 </section>
-<%- include("../partials/footer") %>
+<%- include("../partials/footer", { loginPage: true }) %>

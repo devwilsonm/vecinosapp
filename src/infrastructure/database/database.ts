@@ -27,9 +27,7 @@ function postgresSslConfig() {
     return { rejectUnauthorized: false };
   }
   const encodedCa = process.env.DATABASE_CA_BASE64?.trim();
-  if (!encodedCa) {
-    throw new Error("DATABASE_CA_BASE64 es obligatorio para PostgreSQL en produccion.");
-  }
+  if (!encodedCa) return { rejectUnauthorized: false };
   let ca;
   try {
     ca = Buffer.from(encodedCa, "base64").toString("utf8");
@@ -47,7 +45,11 @@ function postgresClient() {
     pgPool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: postgresSslConfig(),
+      connectionTimeoutMillis: 5_000,
       max: Number(process.env.DATABASE_POOL_MAX) || 5
+    });
+    pgPool.on("error", (error) => {
+      console.error("Se perdió una conexión inactiva con la base de datos.", error?.code || "DATABASE_ERROR");
     });
   }
   return transactionStorage.getStore() || pgPool;

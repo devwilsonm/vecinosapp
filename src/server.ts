@@ -28,6 +28,7 @@ const paymentRoutes = require("./routes/payments");
 const reportRoutes = require("./routes/reports");
 
 const app = express();
+let databaseReady = false;
 const isProduction = process.env.NODE_ENV === "production";
 if (isProduction) app.set("trust proxy", 1);
 const buildInfoPath = path.join(rootDir, "build-info.json");
@@ -62,22 +63,8 @@ app.use(async (req, res, next) => {
   res.locals.publicTheme = readThemeCookie(req);
   res.locals.currentUser = null;
   res.locals.isSuperAdmin = false;
-  next();
-});
-
-app.use(async (req, res, next) => {
-  const session = readSession(req);
-  req.currentUser = session ? (await userRepository.findSessionUser(session.userId)) : null;
-  if (req.currentUser) {
-    [req.currentUser.permissions, req.currentUser.building_ids] = await Promise.all([
-      userRepository.listPermissionKeys(req.currentUser.role_id),
-      userRepository.listBuildingIds(req.currentUser.id)
-    ]);
-  }
-  res.locals.currentUser = req.currentUser;
-  if (!res.locals.publicTheme && req.currentUser?.theme) res.locals.publicTheme = req.currentUser.theme;
-  res.locals.isSuperAdmin = isSuperAdmin(req.currentUser);
-  res.locals.hasPermission = (permissionKey) => hasPermission(req.currentUser, permissionKey);
+  res.locals.hasPermission = () => false;
+  res.locals.databaseReady = databaseReady;
   next();
 });
 
@@ -107,7 +94,7 @@ app.use((req, res, next) => {
     return originalRedirect(statusOrUrl);
   };
   res.on("finish", () => {
-    if (!shouldAuditRequest(req, res.statusCode)) return;
+    if (!databaseReady || !shouldAuditRequest(req, res.statusCode)) return;
     void writeApiLog({
       userId: req.currentUser?.id,
       userEmail: req.currentUser?.email || req.auditUserEmail,
@@ -119,6 +106,8 @@ app.use((req, res, next) => {
       message: auditMessage(req, res.statusCode),
       ip: req.ip || req.socket?.remoteAddress,
       userAgent: req.headers["user-agent"] || ""
+    }).catch((error) => {
+      console.error("No se pudo guardar el log de auditoría.", error?.code || "DATABASE_ERROR");
     });
   });
   next();
@@ -180,6 +169,40 @@ app.use(express.static(path.join(rootDir, "public"), {
 app.use(rateLimit({ max: 240, windowMs: 60_000 }));
 app.use(rateLimit({ max: 60, windowMs: 60_000, mutationsOnly: true }));
 
+app.use(async (req, res, next) => {
+  if (!databaseReady || isNoisePath(req.path) || (req.method === "POST" && ["/login", "/logout"].includes(req.path))) return next();
+  try {
+    const session = readSession(req);
+    req.currentUser = session ? (await userRepository.findSessionUser(session.userId)) : null;
+    if (req.currentUser) {
+      [req.currentUser.permissions, req.currentUser.building_ids] = await Promise.all([
+        userRepository.listPermissionKeys(req.currentUser.role_id),
+        userRepository.listBuildingIds(req.currentUser.id)
+      ]);
+    }
+    res.locals.currentUser = req.currentUser;
+    if (!res.locals.publicTheme && req.currentUser?.theme) res.locals.publicTheme = req.currentUser.theme;
+    res.locals.isSuperAdmin = isSuperAdmin(req.currentUser);
+    res.locals.hasPermission = (permissionKey) => hasPermission(req.currentUser, permissionKey);
+  } catch (error) {
+    req.currentUser = null;
+    res.locals.currentUser = null;
+    console.error("No se pudo consultar la sesión.", error?.code || "DATABASE_ERROR");
+    if (req.path !== "/login") {
+      res.setHeader("Retry-After", "30");
+      return res.status(503).render("error", { title: "Servicio no disponible", message: "No podemos conectarnos al servicio en este momento. Inténtalo nuevamente en unos minutos." });
+    }
+  }
+  next();
+});
+
+app.use((req, res, next) => {
+  if (databaseReady || req.path === "/login" || req.path === "/logout") return next();
+  if (req.path === "/" && ["GET", "HEAD"].includes(req.method)) return res.redirect("/login");
+  res.setHeader("Retry-After", "30");
+  return res.status(503).render("error", { title: "Servicio no disponible", message: "No podemos conectarnos al servicio en este momento. Inténtalo nuevamente en unos minutos." });
+});
+
 app.use(authRoutes);
 app.use("/shared", sharedRoutes);
 
@@ -210,13 +233,18 @@ app.use((error, req, res, next) => {
   res.status(500).render("error", { title: "Error", message: "Ocurrió un error inesperado." });
 });
 
-Promise.all([initDb(), initLogDb()])
-  .then(() => {
-    app.listen(port, () => {
-      console.log(`VecinosApp disponible en http://localhost:${port}`);
-    });
-  })
-  .catch((error) => {
-    console.error("No se pudo inicializar la base de datos.", error);
-    process.exit(1);
-  });
+async function initializeDatabases() {
+  const results = await Promise.allSettled([initDb(), initLogDb()]);
+  databaseReady = results.every((result) => result.status === "fulfilled");
+  if (databaseReady) {
+    console.log("Base de datos disponible.");
+    return;
+  }
+  console.error("Base de datos no disponible. El login seguirá accesible; se reintentará en 30 segundos.");
+  setTimeout(() => void initializeDatabases(), 30_000).unref();
+}
+
+app.listen(port, () => {
+  console.log(`VecinosApp disponible en http://localhost:${port}`);
+  void initializeDatabases();
+});

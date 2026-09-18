@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es" data-theme="<%= publicTheme === 'dark' ? 'dark' : 'light' %>" data-authenticated="false" data-theme-server="true">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title %></title>
+  <link rel="icon" href="/favicon.ico?v=<%= assetVersion %>" type="image/webp">
+  <link rel="shortcut icon" href="/favicon.ico?v=<%= assetVersion %>" type="image/webp">
+  <link rel="icon" type="image/webp" sizes="32x32" href="/favicon/favicon-32x32.webp">
+  <meta name="theme-color" content="#0755b5">
+  <link rel="stylesheet" href="/css/base.css?v=<%= assetVersion %>">
+  <link rel="stylesheet" href="/css/content.css?v=<%= assetVersion %>">
+  <link rel="stylesheet" href="/css/public.css?v=<%= assetVersion %>">
+</head>
+<body class="public-body">
+<header class="public-topbar">
+  <div class="public-topbar-inner">
+    <div class="public-brand">
+      <img src="/favicon/icon-64x64.webp" alt="" width="32" height="32">
+      <span>VecinosApp</span>
+    </div>
+    <div class="public-topbar-actions">
+      <span class="public-view-label">Consulta pública</span>
+      <%- include("theme-toggle", { themeToggleClass: "public-theme-toggle" }) %>
+    </div>
+  </div>
+</header>
+<main class="container public-container">

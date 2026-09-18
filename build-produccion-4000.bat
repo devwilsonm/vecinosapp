@@ -32,9 +32,16 @@ if not exist "dist\instance\vecinosapp.sqlite" (
 set NODE_ENV=production
 set LOCAL_HTTP=true
 set PORT=4000
-set DATABASE_PATH=%CD%\instance\vecinosapp.sqlite
 set LOG_DATABASE_PATH=%CD%\instance\vecinosapp_logs.sqlite
 if "%SESSION_SECRET%"=="" set SESSION_SECRET=vecinosapp-local-production-secret-change-me
+if not defined PRODUCTION_DATABASE_URL (
+  echo ERROR: No se encontro PRODUCTION_DATABASE_URL.
+  echo Configure PRODUCTION_DATABASE_URL con la conexion de la base de datos de produccion antes de continuar.
+  pause
+  exit /b 1
+)
+set "DATABASE_URL=%PRODUCTION_DATABASE_URL%"
+echo Usando la base PostgreSQL configurada en PRODUCTION_DATABASE_URL.
 
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":4000" ^| findstr "LISTENING"') do (
   echo Cerrando proceso existente en puerto 4000: %%a

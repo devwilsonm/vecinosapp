@@ -1,0 +1,209 @@
+.public-share-view {
+  max-width: 1180px;
+}
+
+.public-body {
+  font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.public-topbar {
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.public-topbar-inner {
+  width: min(1180px, calc(100% - 32px));
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 auto;
+}
+
+.public-brand,
+.public-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.public-brand {
+  color: var(--primary);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.public-brand img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.public-view-label {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.public-theme-toggle {
+  margin-left: 0;
+}
+
+.public-container {
+  margin-top: 32px;
+  margin-bottom: 48px;
+}
+
+.public-page-head h1 {
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  letter-spacing: -0.02em;
+}
+
+.public-summary-card {
+  display: grid;
+  gap: 20px;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px var(--shadow);
+}
+
+.public-summary-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.public-summary-total span {
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.public-summary-total strong {
+  color: var(--amount-accent);
+  font-size: 1.8rem;
+  line-height: 1.1;
+}
+
+.public-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 28px;
+}
+
+.public-summary-grid p,
+.public-consumption {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.public-summary-grid span,
+.public-consumption span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.public-summary-grid strong,
+.public-consumption strong {
+  font-size: 1.05rem;
+}
+
+.public-consumption {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.public-share-view > h2 {
+  margin-top: 32px;
+  font-size: 1.35rem;
+}
+
+.public-floor {
+  border-radius: 12px;
+}
+
+.public-floor summary {
+  min-height: 60px;
+  padding: 14px 18px;
+  background: var(--surface-soft);
+}
+
+.public-floor .floor-title {
+  font-size: 1.05rem;
+}
+
+.public-floor .floor-meta,
+.public-floor .floor-totals {
+  font-size: 0.95rem;
+}
+
+.public-allocation-table {
+  font-size: 1rem;
+}
+
+.public-allocation-table th,
+.public-allocation-table td {
+  padding: 13px 14px;
+}
+
+.public-share-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.public-share-actions button {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 18px;
+  border-radius: 8px;
+}
+
+.public-share-actions .share-status {
+  grid-column: 1 / -1;
+}
+
+.public-share-actions .share-action { width: 100%; }
+
+@media (max-width: 800px) {
+.public-topbar-inner {
+    width: min(100% - 24px, 1180px);
+    min-height: 60px;
+  }
+
+.public-view-label { display: none; }
+
+.public-container {
+    width: min(100% - 24px, 1180px);
+    margin-top: 22px;
+    margin-bottom: 36px;
+  }
+
+.public-summary-card {
+    gap: 16px;
+    padding: 18px;
+  }
+
+.public-summary-total strong { font-size: 1.5rem; }
+
+.public-summary-grid { grid-template-columns: 1fr; gap: 14px; }
+
+.public-floor summary { padding: 12px 14px; }
+
+.public-allocation-table tbody td { font-size: 1rem; }
+
+.public-share-actions {
+    align-items: stretch;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

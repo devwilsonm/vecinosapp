@@ -62,5 +62,7 @@
     <div class="detail">No hay consumos registrados para el intervalo seleccionado.</div>
   <% } %>
 </section>
+<% if (consumptionCharts.length) { %>
 <script src="/js/consumption-chart.js?v=<%= assetVersion %>" defer></script>
+<% } %>
 <%- include("../partials/footer") %>

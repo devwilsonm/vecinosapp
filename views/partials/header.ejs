@@ -12,20 +12,23 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon-180x180.webp">
   <link rel="manifest" href="/favicon/site.webmanifest">
   <meta name="csrf-token" content="<%= csrfToken %>">
-  <meta name="theme-color" content="#256f7c">
-  <link rel="stylesheet" href="/css/styles.css?v=<%= assetVersion %>">
+  <meta name="theme-color" content="#0755b5">
+  <link rel="stylesheet" href="/css/base.css?v=<%= assetVersion %>">
+  <% if (typeof pageClass !== "undefined" && pageClass === "login-page") { %>
+    <link rel="stylesheet" href="/css/login.css?v=<%= assetVersion %>">
+  <% } else { %>
+    <link rel="stylesheet" href="/css/content.css?v=<%= assetVersion %>">
+    <link rel="stylesheet" href="/css/styles.css?v=<%= assetVersion %>">
+  <% } %>
 </head>
-<body>
+<body<% if (typeof pageClass !== 'undefined') { %> class="<%= pageClass %>"<% } %>>
   <header class="topbar">
     <div class="nav-row">
       <a class="brand" href="/">
         <img class="brand-logo" src="/favicon/icon-64x64.webp" alt="" width="32" height="32">
         <span>VecinosApp</span>
       </a>
-      <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Activar tema oscuro" title="Activar tema oscuro">
-        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.752 15.002A9.718 9.718 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75a9.718 9.718 0 0 1 .748-3.752A9.753 9.753 0 1 0 21.752 15.002Z"></path></svg>
-        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>
-      </button>
+      <%- include("theme-toggle") %>
       <% if (currentUser) { %>
         <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mainNav" aria-label="Abrir menú">
           <span></span>

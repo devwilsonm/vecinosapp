@@ -19,11 +19,11 @@ export const defaultChartPalette = [
 ];
 
 export function getChartTheme() {
-  const isDark = document.documentElement.dataset.theme === "dark";
+  const palette = getComputedStyle(document.documentElement);
   return {
-    textColor: am5.color(isDark ? 0xe6eef2 : 0x17202a),
-    gridColor: am5.color(isDark ? 0x71818b : 0x66727d),
-    tooltipBackground: am5.color(isDark ? 0x223038 : 0xffffff)
+    textColor: am5.color(palette.getPropertyValue("--text").trim()),
+    gridColor: am5.color(palette.getPropertyValue("--input-border").trim()),
+    tooltipBackground: am5.color(palette.getPropertyValue("--panel").trim())
   };
 }
 

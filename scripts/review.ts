@@ -241,12 +241,18 @@ function checkPerformance() {
 
 function checkUnusedPartials() {
   const viewFiles = walk(path.join(root, "views"), (file) => file.endsWith(".ejs"));
-  const allViews = viewFiles.map((file) => fs.readFileSync(file, "utf8")).join("\n");
+  const includedViews = new Set();
+  for (const file of viewFiles) {
+    const source = fs.readFileSync(file, "utf8");
+    for (const match of source.matchAll(/include\(\s*["']([^"']+)["']/g)) {
+      const target = match[1].endsWith(".ejs") ? match[1] : match[1] + ".ejs";
+      includedViews.add(path.resolve(path.dirname(file), target));
+    }
+  }
   const partials = walk(path.join(root, "views", "partials"), (file) => file.endsWith(".ejs"));
 
   for (const partial of partials) {
-    const relative = path.relative(path.join(root, "views"), partial).replace(/\\/g, "/").replace(/\.ejs$/, "");
-    if (!allViews.includes(`partials/${path.basename(relative)}`) && !allViews.includes(relative)) {
+    if (!includedViews.has(path.resolve(partial))) {
       warnings.push(`Partial posiblemente no usado: ${path.relative(root, partial)}`);
     }
   }
