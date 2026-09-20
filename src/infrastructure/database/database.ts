@@ -22,12 +22,16 @@ function postgresSql(sql) {
 }
 
 function postgresSslConfig() {
-  if (process.env.DATABASE_SSL === "false") return false;
-  if (process.env.NODE_ENV !== "production") {
+  const isProduction = process.env.NODE_ENV === "production";
+  if (process.env.DATABASE_SSL === "false") {
+    if (isProduction) throw new Error("DATABASE_SSL=false no está permitido en producción.");
+    return false;
+  }
+  if (!isProduction) {
     return { rejectUnauthorized: false };
   }
   const encodedCa = process.env.DATABASE_CA_BASE64?.trim();
-  if (!encodedCa) return { rejectUnauthorized: false };
+  if (!encodedCa) throw new Error("DATABASE_CA_BASE64 es obligatorio en producción.");
   let ca;
   try {
     ca = Buffer.from(encodedCa, "base64").toString("utf8");
@@ -333,9 +337,13 @@ async function initDb() {
   const userCount = Number((await db.prepare("SELECT COUNT(*) AS total FROM users").get()).total);
   const superAdminRole = await db.prepare("SELECT id FROM roles WHERE key = 'super_admin'").get();
   if (userCount === 0) {
-    await db.prepare("INSERT INTO users (role_id, full_name, email, password_hash, is_active) VALUES (?, ?, ?, ?, 1)").run(superAdminRole?.id || null, "Administrador", "admin@vecinosapp.local", hashPassword("admin123"));
-  } else if (superAdminRole) {
-    await db.prepare("UPDATE users SET role_id = ? WHERE email = ? AND role_id IS NULL").run(superAdminRole.id, "admin@vecinosapp.local");
+    const isProduction = process.env.NODE_ENV === "production";
+    const initialAdminEmail = String(process.env.INITIAL_ADMIN_EMAIL || (isProduction ? "" : "admin@vecinosapp.local")).trim().toLowerCase();
+    const initialAdminPassword = String(process.env.INITIAL_ADMIN_PASSWORD || (isProduction ? "" : "admin123"));
+    if (!initialAdminEmail || !initialAdminPassword || (isProduction && (initialAdminPassword.length < 12 || initialAdminPassword.length > 128))) {
+      throw new Error("La base no tiene usuarios. Define INITIAL_ADMIN_EMAIL e INITIAL_ADMIN_PASSWORD para crear el primer administrador.");
+    }
+    await db.prepare("INSERT INTO users (role_id, full_name, email, password_hash, is_active) VALUES (?, ?, ?, ?, 1)").run(superAdminRole?.id || null, "Administrador", initialAdminEmail, hashPassword(initialAdminPassword));
   }
   const buildingCount = Number((await db.prepare("SELECT COUNT(*) AS total FROM buildings").get()).total);
   const occupantsWithoutBuilding = Number((await db.prepare("SELECT COUNT(*) AS total FROM occupants WHERE building_id IS NULL").get()).total);

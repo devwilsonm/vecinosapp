@@ -60,7 +60,7 @@ npm run init-db
 npm run seed-db
 ```
 
-El usuario inicial de datos de prueba es:
+En desarrollo local, si no se definen `INITIAL_ADMIN_EMAIL` e `INITIAL_ADMIN_PASSWORD`, el usuario inicial de datos de prueba es:
 
 ```text
 Correo: admin@vecinosapp.local
@@ -92,8 +92,10 @@ La rama de publicación debe contener el código TypeScript y los archivos de co
 En el App Service configura como mínimo:
 
 - `DATABASE_URL`: cadena de conexión de Supabase de producción.
-- `DATABASE_SSL=true` por defecto; `DATABASE_SSL=false` permite desactivar TLS temporalmente para diagnostico.
+- `DATABASE_SSL=true` por defecto; `DATABASE_SSL=false` solo se permite fuera de produccion.
 - `DATABASE_CA_BASE64`: certificado CA de Supabase codificado en Base64; se usa para validar TLS en produccion cuando `DATABASE_SSL` no es `false`.
+- `INITIAL_ADMIN_EMAIL`: correo del primer administrador cuando la base de datos de produccion esta vacia; se usa solo durante esa inicializacion.
+- `INITIAL_ADMIN_PASSWORD`: contrasena del primer administrador cuando la base de datos de produccion esta vacia; debe tener entre 12 y 128 caracteres y puede retirarse despues del primer arranque.
 - `SESSION_SECRET`: secreto largo y aleatorio.
 - `CSRF_SECRET`: secreto largo y aleatorio para tokens CSRF; si no se define, se reutiliza `SESSION_SECRET`.
 - `NODE_ENV=production`.
