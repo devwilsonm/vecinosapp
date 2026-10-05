@@ -1,6 +1,30 @@
 // Browser script migrated from JavaScript; DOM typing is kept permissive while the UI is incrementally typed.
 // @ts-nocheck
 
+document.querySelector("[data-print-debt-report]")?.addEventListener("click", () => window.print());
+
+const debtOccupantSearch = document.querySelector("[data-debt-occupant-search]");
+const debtOccupantId = document.querySelector("[data-debt-occupant-id]");
+if (debtOccupantSearch && debtOccupantId) {
+  const occupantOptions = new Map();
+  document.querySelectorAll("#debtOccupants option").forEach((option) => {
+    if (occupantOptions.has(option.value)) {
+      option.value = `${option.value} (${option.dataset.occupantId})`;
+    }
+    occupantOptions.set(option.value, option.dataset.occupantId);
+    if (option.dataset.occupantId === debtOccupantId.value) debtOccupantSearch.value = option.value;
+  });
+  const updateDebtOccupant = () => {
+    debtOccupantId.value = occupantOptions.get(debtOccupantSearch.value) || "";
+    debtOccupantSearch.setCustomValidity(debtOccupantId.value ? "" : "Selecciona un ocupante de las sugerencias.");
+  };
+  debtOccupantSearch.addEventListener("input", updateDebtOccupant);
+  debtOccupantSearch.form?.addEventListener("submit", (event) => {
+    updateDebtOccupant();
+    if (!debtOccupantSearch.reportValidity()) event.preventDefault();
+  });
+}
+
 document.querySelectorAll(".confirmable").forEach((form) => {
   form.addEventListener("submit", (event) => {
     const message = form.dataset.confirm || "¿Confirmar acción?";

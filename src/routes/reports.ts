@@ -4,12 +4,42 @@ const express = require("express");
 const { requirePermission } = require("../utils/access");
 const { canAccessAllBuildings } = require("../utils/access");
 const { hasBuildingAccess, permittedBuildingIds } = require("../utils/buildingAccess");
-const { buildingRepository, publicReportRepository, reportRepository } = require("../infrastructure/container");
+const { buildingRepository, occupantRepository, publicReportRepository, reportRepository } = require("../infrastructure/container");
 const { buildConsumptionCharts, nextMonth, normalizeConsumptionFilters } = require("../domain/reports/consumptionReport");
 
 const router = express.Router();
 
 router.use(requirePermission("reports.view"));
+
+router.get("/occupant-debts", async (req, res) => {
+  const allBuildings = canAccessAllBuildings(req.currentUser);
+  const buildingIds = permittedBuildingIds(req.currentUser);
+  const occupants = await occupantRepository.listAccessible(allBuildings, buildingIds);
+  const selectedOccupantId = Number(req.query.occupant_id || 0);
+  const occupant = occupants.find((row) => Number(row.id) === selectedOccupantId);
+  if (req.query.occupant_id && (!Number.isSafeInteger(selectedOccupantId) || !occupant)) {
+    return res.status(404).send("Ocupante no disponible.");
+  }
+  const debts = occupant
+    ? await reportRepository.pendingDebtsForOccupant(allBuildings, buildingIds, selectedOccupantId)
+    : [];
+  const periods = [];
+  const periodIndex = new Map();
+  let totalBalanceCents = 0;
+  for (const debt of debts) {
+    let group = periodIndex.get(debt.period);
+    if (!group) {
+      group = { period: debt.period, receipts: [], balance_cents: 0 };
+      periodIndex.set(debt.period, group);
+      periods.push(group);
+    }
+    debt.balance_cents = Number(debt.balance_cents);
+    group.receipts.push(debt);
+    group.balance_cents += debt.balance_cents;
+    totalBalanceCents += debt.balance_cents;
+  }
+  res.render("reports/occupant-debts", { occupants, selectedOccupantId, occupant, periods, totalBalanceCents, serviceLabels });
+});
 
 async function consumptionReportData(req, source = req.query, scope: Record<string, any> = {}) {
   const allBuildings = scope.allBuildings ?? canAccessAllBuildings(req.currentUser);
@@ -70,7 +100,7 @@ router.get("/", async (req, res) => {
     group.balance_cents += debt.balance_cents;
     return floors;
   }, []);
-  res.render("reports/index", { debtsByFloor, pendingReceipts, paymentsByPeriod, receiptTotals });
+  res.render("reports/index", { debtsByFloor, pendingReceipts, paymentsByPeriod, receiptTotals, serviceLabels });
 });
 
 module.exports = router;

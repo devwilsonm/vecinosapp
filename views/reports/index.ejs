@@ -36,8 +36,8 @@
   <% if (!paymentsByPeriod.length) { %><tr><td colspan="2">Sin pagos.</td></tr><% } %>
 </tbody></table>
 <h2>Total recaudado y saldo por recibo</h2>
-<table><thead><tr><th>Recibo</th><th>Total</th><th>Recaudado</th><th>Saldo</th></tr></thead><tbody>
-  <% receiptTotals.forEach((receipt) => { %><tr><td><%= receipt.receipt_number %></td><td>S/ <%= money(receipt.total_amount_cents) %></td><td>S/ <%= money(receipt.collected_cents) %></td><td>S/ <%= money(receipt.balance_cents) %></td></tr><% }) %>
-  <% if (!receiptTotals.length) { %><tr><td colspan="4">Sin recibos.</td></tr><% } %>
+<table><thead><tr><th>Recibo</th><th>Servicio</th><th>Total</th><th>Recaudado</th><th>Saldo</th></tr></thead><tbody>
+  <% receiptTotals.forEach((receipt) => { %><tr><td><%= receipt.receipt_number %></td><td><%= serviceLabels[receipt.service_type] || receipt.service_type %></td><td>S/ <%= money(receipt.total_amount_cents) %></td><td>S/ <%= money(receipt.collected_cents) %></td><td>S/ <%= money(receipt.balance_cents) %></td></tr><% }) %>
+  <% if (!receiptTotals.length) { %><tr><td colspan="5">Sin recibos.</td></tr><% } %>
 </tbody></table>
 <%- include("../partials/footer") %>
