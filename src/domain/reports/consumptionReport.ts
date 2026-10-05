@@ -1,6 +1,6 @@
-export const serviceLabels = { agua: "Agua", luz: "Luz", internet: "Internet", otro: "Otro" };
+export const serviceLabels = Object.assign(Object.create(null), { agua: "Agua", luz: "Luz", internet: "Internet", otro: "Otro" });
 export const serviceTypes = Object.keys(serviceLabels);
-export const serviceUnits = { agua: "m3", luz: "kW", internet: "unid.", otro: "unid." };
+export const serviceUnits = Object.assign(Object.create(null), { agua: "m3", luz: "kW", internet: "unid.", otro: "unid." });
 
 function validMonth(value, fallback) {
   return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(value)) ? String(value) : fallback;
@@ -53,7 +53,7 @@ export function normalizeConsumptionFilters(source, referenceDate, buildingAllow
   let selectedTo = validMonth(source.to, defaultTo);
   if (selectedFrom > selectedTo) [selectedFrom, selectedTo] = [selectedTo, selectedFrom];
   const requestedService = String(source.service_type || "all");
-  const selectedService = serviceTypes.includes(requestedService) ? requestedService : "all";
+  const selectedService = requestedService.length <= 80 ? requestedService : "all";
   const requestedBuildingId = Number(source.building_id) || 0;
   const selectedBuildingId = requestedBuildingId && buildingAllowed(requestedBuildingId) ? requestedBuildingId : 0;
   return { selectedFrom, selectedTo, selectedService, selectedBuildingId };
@@ -63,16 +63,15 @@ export function buildConsumptionCharts(rows, selectedFrom, selectedTo) {
   const months = monthRange(selectedFrom, selectedTo);
   const consumptionByService = new Map();
   rows.forEach((row) => {
-    const service = serviceLabels[row.service_type] ? row.service_type : "otro";
+    const service = row.service_type;
     let group = consumptionByService.get(service);
     if (!group) {
-      group = { service, label: serviceLabels[service], unit: row.consumption_unit || serviceUnits[service], values: new Map() };
+      group = { service, label: serviceLabels[service] || service, unit: row.consumption_unit || serviceUnits[service] || "unid.", values: new Map() };
       consumptionByService.set(service, group);
     }
     group.values.set(row.month, Number(row.consumption_milli || 0) / 1000);
   });
-  return serviceTypes.filter((service) => consumptionByService.has(service)).map((service) => {
-    const group = consumptionByService.get(service);
+  return [...consumptionByService.values()].map((group) => {
     return {
       service: group.service,
       label: group.label,

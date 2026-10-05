@@ -13,8 +13,9 @@
   </label>
   <label>Tipo de servicio
     <select name="service_type" id="serviceTypeSelect" required>
-      <% ["agua", "luz", "internet", "otro"].forEach((service) => { %>
-        <option value="<%= service %>" <%= receipt.service_type === service ? "selected" : "" %>><%= service %></option>
+      <option value="">Seleccionar servicio</option>
+      <% buildings.services.filter((service) => service.is_active || (Number(receipt.building_id) === Number(service.building_id) && receipt.service_type === service.name)).forEach((service) => { %>
+        <option value="<%= service.name %>" data-building-id="<%= service.building_id %>" <%= Number(receipt.building_id) === Number(service.building_id) && receipt.service_type === service.name ? "selected" : "" %>><%= service.label %></option>
       <% }) %>
     </select>
   </label>

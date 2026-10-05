@@ -217,6 +217,7 @@ app.use(pageCache());
 app.use("/", dashboardRoutes);
 app.use("/buildings", buildingRoutes);
 app.use("/occupants", occupantRoutes);
+app.use("/services", require("./routes/services"));
 app.use("/receipts", receiptRoutes);
 app.use("/allocations", allocationRoutes);
 app.use("/payments", paymentRoutes);

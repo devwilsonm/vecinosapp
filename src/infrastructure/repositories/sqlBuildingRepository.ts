@@ -83,7 +83,11 @@ export class SqlBuildingRepository implements BuildingRepository {
   }
 
   async remove(id: number | string) {
-    await this.database.prepare("DELETE FROM buildings WHERE id = ?").run(id);
+    const remove = this.database.transaction(async () => {
+      await this.database.prepare("DELETE FROM building_services WHERE building_id = ?").run(id);
+      await this.database.prepare("DELETE FROM buildings WHERE id = ?").run(id);
+    });
+    await remove();
   }
 }
 

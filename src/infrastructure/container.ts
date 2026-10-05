@@ -1,3 +1,4 @@
+const { SqlServiceRepository } = require("./repositories/sqlServiceRepository");
 const { db } = require("./database/database");
 const { SqlBuildingRepository } = require("./repositories/sqlBuildingRepository");
 const { SqlOccupantRepository } = require("./repositories/sqlOccupantRepository");
@@ -12,6 +13,7 @@ const { SqlUserRepository } = require("./repositories/sqlUserRepository");
 const { SqlRoleRepository } = require("./repositories/sqlRoleRepository");
 const { SqlAllocationRepository } = require("./repositories/sqlAllocationRepository");
 
+const serviceRepository = new SqlServiceRepository(db);
 const buildingRepository = new SqlBuildingRepository(db);
 const occupantRepository = new SqlOccupantRepository(db);
 const receiptRepository = new SqlReceiptRepository(db);
@@ -25,4 +27,4 @@ const userRepository = new SqlUserRepository(db);
 const roleRepository = new SqlRoleRepository(db);
 const allocationRepository = new SqlAllocationRepository(db);
 
-module.exports = { allocationRepository, buildingRepository, dashboardRepository, occupantRepository, paymentRepository, publicAllocationRepository, publicReportRepository, publicLinkSettingsRepository, receiptRepository, reportRepository, roleRepository, userRepository };
+module.exports = { serviceRepository, allocationRepository, buildingRepository, dashboardRepository, occupantRepository, paymentRepository, publicAllocationRepository, publicReportRepository, publicLinkSettingsRepository, receiptRepository, reportRepository, roleRepository, userRepository };

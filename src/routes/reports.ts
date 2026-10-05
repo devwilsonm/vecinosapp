@@ -1,3 +1,5 @@
+const { servicesForBuildings } = require("../utils/services");
+const { serviceLabels } = require("../domain/reports/consumptionReport");
 const express = require("express");
 const { requirePermission } = require("../utils/access");
 const { canAccessAllBuildings } = require("../utils/access");
@@ -22,7 +24,9 @@ async function consumptionReportData(req, source = req.query, scope: Record<stri
     }),
     buildingRepository.listAccessible(allBuildings, buildingIds)
   ]);
-  return { ...filters, consumptionCharts: buildConsumptionCharts(consumptionRows, filters.selectedFrom, filters.selectedTo), buildings, sharePath: null };
+  const services = await servicesForBuildings(buildings);
+  const serviceOptions = [...new Set<string>(services.map((service) => String(service.name)))].map((value) => ({ value, label: serviceLabels[value] || value }));
+  return { serviceOptions, ...filters, consumptionCharts: buildConsumptionCharts(consumptionRows, filters.selectedFrom, filters.selectedTo), buildings, sharePath: null };
 }
 
 router.get("/consumption", async (req, res) => {

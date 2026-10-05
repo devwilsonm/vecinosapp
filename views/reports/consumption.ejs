@@ -11,7 +11,7 @@
     <label>Servicio
       <select name="service_type">
         <option value="all" <%= selectedService === "all" ? "selected" : "" %>>Todos los servicios</option>
-        <% [{ value: "agua", label: "Agua" }, { value: "luz", label: "Luz" }, { value: "internet", label: "Internet" }, { value: "otro", label: "Otro" }].forEach((service) => { %>
+        <% serviceOptions.forEach((service) => { %>
           <option value="<%= service.value %>" <%= selectedService === service.value ? "selected" : "" %>><%= service.label %></option>
         <% }) %>
       </select>

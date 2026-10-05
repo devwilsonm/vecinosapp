@@ -65,7 +65,7 @@ router.get("/reports/consumption/:token", async (req, res) => {
   } catch {
     return res.status(404).render("error", { title: "Enlace no válido", message: "El enlace público no existe o ya no está disponible." });
   }
-  const serviceType = serviceTypes.includes(String(link.service_type)) ? String(link.service_type) : "all";
+  const serviceType = String(link.service_type || "all");
   const [rows, buildings] = await Promise.all([
     reportRepository.consumptionByMonth(false, buildingIds, {
       from: `${link.from_month}-01`,
@@ -83,8 +83,8 @@ router.get("/reports/consumption/:token", async (req, res) => {
     selectedFrom: link.from_month,
     selectedTo: link.to_month,
     selectedService: serviceType,
-    serviceLabel: serviceType === "all" ? "Todos los servicios" : serviceLabels[serviceType],
-    serviceUnit: serviceType === "all" ? "" : serviceUnits[serviceType],
+    serviceLabel: serviceType === "all" ? "Todos los servicios" : serviceLabels[serviceType] || serviceType,
+    serviceUnit: serviceType === "all" ? "" : serviceUnits[serviceType] || "unid.",
     buildingLabel: buildings.length === 1 ? buildings[0].name : "Edificios seleccionados",
     shareExpiresAt: Number.isNaN(expiresAt.getTime()) ? "" : expiresAt.toISOString()
   });

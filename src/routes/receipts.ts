@@ -1,3 +1,4 @@
+const { servicesForBuildings } = require("../utils/services");
 const express = require("express");
 const { requirePermission } = require("../utils/access");
 const { ensureBuildingAccess, hasBuildingAccess, permittedBuildingIds } = require("../utils/buildingAccess");
@@ -10,7 +11,7 @@ const router = express.Router();
 
 router.use(requirePermission("receipts.manage"));
 
-const serviceLabels = { agua: "Agua", luz: "Luz", internet: "Internet", otro: "Otro" };
+const serviceLabels = Object.assign(Object.create(null), { agua: "Agua", luz: "Luz", internet: "Internet", otro: "Otro" });
 const serviceTypes = Object.keys(serviceLabels);
 
 function redirectWith(res, url, message, type = "success") {
@@ -18,7 +19,9 @@ function redirectWith(res, url, message, type = "success") {
 }
 
 async function activeBuildings(user, selectedId = 0) {
-  return buildingRepository.listActive(user.role_key === "super_admin" || user.role_key === "admin", permittedBuildingIds(user), selectedId);
+  const buildings = await buildingRepository.listActive(user.role_key === "super_admin" || user.role_key === "admin", permittedBuildingIds(user), selectedId);
+  buildings.services = await servicesForBuildings(buildings);
+  return buildings;
 }
 
 async function validateReceipt(body, user, id = 0) {
@@ -26,13 +29,18 @@ async function validateReceipt(body, user, id = 0) {
   ["building_id", "service_type", "receipt_number", "period", "issue_date", "due_date", "total_amount"].forEach((field) => {
     if (!String(body[field] || "").trim()) errors.push("Completa todos los campos obligatorios.");
   });
-  if (!["agua", "luz", "internet", "otro"].includes(body.service_type)) errors.push("Selecciona un tipo de servicio válido.");
   if (body.issue_date && !isDate(body.issue_date)) errors.push("La fecha de emisión no es válida.");
   if (body.due_date && !isDate(body.due_date)) errors.push("La fecha de vencimiento no es válida.");
   const building = await receiptRepository.findBuildingForValidation(Number(body.building_id));
   if (!building) errors.push("Selecciona un edificio activo.");
   if (building && !hasBuildingAccess(user, building.id)) errors.push("No tienes permisos para usar ese edificio.");
 
+  if (building) {
+    const services = await servicesForBuildings([building]);
+    const previous = id ? await receiptRepository.findRawById(id) : null;
+    const keepingService = previous && Number(previous.building_id) === Number(building.id) && previous.service_type === body.service_type;
+    if (!services.some((service) => service.name === body.service_type && service.is_active) && !keepingService) errors.push("Selecciona un servicio activo asociado al edificio.");
+  }
   let totalCents = 0;
   let consumptionTotalMilli = 0;
   try {
@@ -61,7 +69,10 @@ router.get("/", async (req, res) => {
   const requestedYear = String(req.query.year || currentYear);
   const selectedYear = requestedYear === "all" ? "all" : /^\d{4}$/.test(requestedYear) ? Number(requestedYear) : currentYear;
   const requestedService = String(req.query.service_type || "all");
-  const selectedService = serviceTypes.includes(requestedService) ? requestedService : "all";
+  const catalogBuildings = await buildingRepository.listAccessible(canAccessAll, buildingIds);
+  const services = await servicesForBuildings(catalogBuildings);
+  const availableServices = [...new Set<string>(services.map((service) => String(service.name)))];
+  const selectedService = availableServices.includes(requestedService) ? requestedService : "all";
   const requestedBuildingId = Number(req.query.building_id) || 0;
   const selectedBuildingId = requestedBuildingId && hasBuildingAccess(req.currentUser, requestedBuildingId) ? requestedBuildingId : 0;
   const [receipts, buildings, availableYears] = await Promise.all([
@@ -70,23 +81,24 @@ router.get("/", async (req, res) => {
       serviceType: selectedService === "all" ? "" : selectedService,
       year: selectedYear === "all" ? 0 : selectedYear
     }),
-    buildingRepository.listAccessible(canAccessAll, buildingIds),
+    Promise.resolve(catalogBuildings),
     receiptRepository.listAccessibleYears(canAccessAll, buildingIds)
   ]);
   const years = [...new Set([currentYear, ...availableYears.map((item) => Number(item.year)).filter((year) => year > 0)])].sort((a, b) => b - a);
   const groups = new Map();
   receipts.forEach((receipt) => {
-    const service = serviceLabels[receipt.service_type] ? receipt.service_type : "otro";
+    const service = receipt.service_type;
     let group = groups.get(service);
     if (!group) {
-      group = { service, label: serviceLabels[service], receipts: [], total_amount_cents: 0 };
+      group = { service, label: serviceLabels[service] || service, receipts: [], total_amount_cents: 0 };
       groups.set(service, group);
     }
     group.receipts.push(receipt);
     group.total_amount_cents += Number(receipt.total_amount_cents || 0);
   });
-  const receiptsByService = serviceTypes.filter((service) => groups.has(service)).map((service) => groups.get(service));
+  const receiptsByService = [...groups.values()];
   res.render("receipts/index", {
+    serviceOptions: availableServices.map((value) => ({ value, label: serviceLabels[value] || value })),
     receiptsByService,
     receiptCount: receipts.length,
     buildings,
@@ -189,6 +201,7 @@ router.put("/:id", async (req, res) => {
   if (!ensureBuildingAccess(req, res, receipt.building_id)) return;
   const { errors, totalCents, consumptionTotalMilli } = await validateReceipt(req.body, req.currentUser, Number(req.params.id));
   const allocations = Number((await receiptRepository.countAllocations(req.params.id)).total);
+  if (allocations > 0 && req.body.service_type !== receipt.service_type) errors.push("No se puede cambiar el servicio de un recibo ya prorrateado.");
   if (allocations > 0 && totalCents !== receipt.total_amount_cents) errors.push("No se puede cambiar el monto de un recibo ya prorrateado.");
   if (allocations > 0 && consumptionTotalMilli !== receipt.consumption_total_milli) errors.push("No se puede cambiar el consumo total de un recibo ya prorrateado.");
   if (allocations > 0 && Number(req.body.building_id) !== Number(receipt.building_id)) errors.push("No se puede cambiar el edificio de un recibo ya prorrateado.");

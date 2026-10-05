@@ -477,3 +477,18 @@ if (massPaymentForm) {
   checks.forEach((check) => check.addEventListener("change", updateMassPaymentSummary));
   updateMassPaymentSummary();
 }
+
+const receiptBuildingSelect = document.querySelector('form select[name="building_id"]');
+if (receiptBuildingSelect && serviceTypeSelect) {
+  const updateServiceOptions = () => {
+    for (const option of serviceTypeSelect.options) {
+      const unavailable = Boolean(option.dataset.buildingId) && option.dataset.buildingId !== receiptBuildingSelect.value;
+      option.hidden = unavailable;
+      option.disabled = unavailable;
+    }
+    if (serviceTypeSelect.selectedOptions[0]?.disabled) serviceTypeSelect.value = "";
+    updateConsumptionHelp();
+  };
+  receiptBuildingSelect.addEventListener("change", updateServiceOptions);
+  updateServiceOptions();
+}

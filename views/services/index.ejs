@@ -1,0 +1,36 @@
+<%- include("../partials/header", { title: "Servicios del edificio | VecinosApp" }) %>
+<section class="page-head"><h1>Servicios del edificio</h1></section>
+<p>Agrega servicios para emitir recibos, asignar el costo a los ocupantes que los utilizan y registrar sus pagos.</p>
+<%- include("../partials/errors", { errors }) %>
+<form method="post" action="/services" class="form">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <label>Edificio <select name="building_id" required>
+    <option value="">Seleccionar edificio</option>
+    <% buildings.forEach((building) => { %><option value="<%= building.id %>" <%= Number(values.building_id) === Number(building.id) ? "selected" : "" %>><%= building.name %></option><% }) %>
+  </select></label>
+  <label>Nombre del servicio <input name="name" maxlength="80" value="<%= values.name || '' %>" placeholder="Ej. Limpieza, cochera o lavandería" required></label>
+  <div class="form-actions"><button class="button" type="submit" <%= buildings.length ? "" : "disabled" %>>Agregar servicio</button></div>
+</form>
+<% if (!buildings.length) { %><p>No hay edificios activos disponibles. Registra o activa un edificio para agregar servicios.</p><% } %>
+<% buildings.forEach((building) => { %>
+<section>
+  <h2><%= building.name %></h2>
+  <div class="table-wrap"><table><thead><tr><th>Servicio</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+  <% services.filter((service) => Number(service.building_id) === Number(building.id)).forEach((service) => { %>
+    <tr><td><%= service.label %></td><td><%= service.is_active ? "Activo" : "Inactivo" %></td><td>
+    <% if (service.standard) { %>Servicio base<% } else { %>
+      <form method="post" action="/services/status">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="building_id" value="<%= building.id %>">
+        <input type="hidden" name="name" value="<%= service.name %>">
+        <input type="hidden" name="is_active" value="<%= service.is_active ? 0 : 1 %>">
+        <button class="button secondary" type="submit" aria-label="<%= service.is_active ? 'Desactivar' : 'Activar' %> <%= service.label %>"><%= service.is_active ? "Desactivar" : "Activar" %></button>
+      </form>
+    <% } %>
+    </td></tr>
+  <% }) %>
+  </tbody></table></div>
+</section>
+<% }) %>
+<p>Desactivar un servicio evita nuevos recibos y conserva los recibos y pagos anteriores.</p>
+<%- include("../partials/footer") %>
