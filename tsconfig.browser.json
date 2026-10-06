@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "None",
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
     "lib": ["ES2020", "DOM"],
     "rootDir": "public/js",
     "outDir": "public/js",
