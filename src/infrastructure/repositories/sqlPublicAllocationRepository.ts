@@ -13,11 +13,6 @@ export class SqlPublicAllocationRepository implements PublicAllocationRepository
     return isPublicLinkExpired(link);
   }
 
-  async publicLinkTtlHours() {
-    const { createdAt, expiresAt } = await publicLinkExpiration(this.database);
-    return (expiresAt.getTime() - createdAt.getTime()) / (60 * 60 * 1000);
-  }
-
   async findOrCreateLink(receiptId: number | string) {
     const link = await this.database.prepare("SELECT token, created_at, expires_at FROM public_allocation_links WHERE receipt_id = ?").get(receiptId);
     if (link && !this.isLinkExpired(link)) return { token: String(link.token) };

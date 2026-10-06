@@ -1,0 +1,130 @@
+.stats-grid { display: grid; gap: 18px; }
+
+.stats-grid { grid-template-columns: repeat(3, 1fr); margin-bottom: 22px; }
+
+.stats-dots {
+  display: none;
+}
+
+.dashboard-filter {
+  min-width: min(100%, 320px);
+}
+
+.dashboard-filter label {
+  font-size: 0.9rem;
+}
+
+.stat {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.stat-info {
+  background: #d7e7fb;
+  border-color: #8fb4df;
+}
+
+.stat-success {
+  background: #e4f6ed;
+  border-color: #93d3ae;
+}
+
+.stat-warning {
+  background: #fff1d9;
+  border-color: #e6bd6a;
+}
+
+.stat span { display: block; color: var(--muted); margin-bottom: 8px; }
+
+.stat strong { font-size: 2rem; }
+
+.stat-link {
+  color: var(--text);
+}
+
+.stat-link:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+@media (max-width: 800px) {
+.stats-grid {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    margin-inline: -16px;
+    padding: 0 16px 12px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+.stats-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+.stats-grid .stat {
+    flex: 0 0 100%;
+    max-width: 100%;
+    min-height: 116px;
+    scroll-snap-align: center;
+  }
+
+.stats-grid .stat + .stat {
+    margin-left: 0;
+  }
+
+.stats-dots {
+    display: flex;
+    justify-content: center;
+    gap: 7px;
+    margin: -4px 0 22px;
+  }
+
+.stats-dots button {
+    width: 11px;
+    height: 11px;
+    min-height: 11px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--input-border);
+  }
+
+.stats-dots button.active {
+    background: var(--primary);
+  }
+
+
+}
+
+[data-theme="dark"] .stat-success {
+  background: #173d35;
+  border-color: #4d9f87;
+  color: #f3fff9;
+}
+
+[data-theme="dark"] .stat-warning {
+  background: #47361e;
+  border-color: #b4833b;
+  color: #fff8e8;
+}
+
+[data-theme="dark"] .stat-info {
+  background: #193b61;
+  border-color: #4c86c5;
+  color: #f4f8ff;
+}
+
+[data-theme="dark"] .stat-info span {
+  color: #c8e1fb;
+}
+
+[data-theme="dark"] .stat-success span {
+  color: #c2ead9;
+}
+
+[data-theme="dark"] .stat-warning span {
+  color: #f6db9e;
+}

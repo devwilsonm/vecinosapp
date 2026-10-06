@@ -1,16 +1,18 @@
-<%- include("../partials/header", { title: "Deudas por ocupante | VecinosApp", pageClass: "occupant-debts-page" }) %>
+<%- include("../partials/header", { title: "Deudas por ocupante | VecinosApp", pageClass: "occupant-debts-page", pageStyles: ["charts","occupant-debts"] }) %>
 <section class="page-head"><h1>Deudas pendientes por ocupante</h1><a class="debt-report-actions" href="/reports">Volver al resumen</a></section>
 <form class="receipt-filters debt-report-actions" method="get" action="/reports/occupant-debts">
-  <label>Ocupante
+  <div class="debt-occupant-picker">
+    <label for="debtOccupantSearch">Ocupante</label>
     <% const occupantLabel = (row) => `${row.full_name} · ${row.building_name || "Sin edificio"} · Piso ${row.floor} · Unidad ${row.unit}${row.is_active ? "" : " (inactivo)"}`; %>
-    <input type="text" list="debtOccupants" data-debt-occupant-search placeholder="Escribe el nombre del ocupante" value="<%= occupant ? occupantLabel(occupant) : "" %>" autocomplete="off" required>
+    <input id="debtOccupantSearch" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="debtOccupants" data-debt-occupant-search placeholder="Escribe el nombre del ocupante" value="<%= occupant ? occupantLabel(occupant) : "" %>" autocomplete="off" required>
     <input type="hidden" name="occupant_id" data-debt-occupant-id value="<%= occupant ? selectedOccupantId : "" %>">
-    <datalist id="debtOccupants">
+    <div id="debtOccupants" class="debt-occupant-options" role="listbox" aria-label="Ocupantes" hidden>
       <% occupants.forEach((row) => { %>
-        <option value="<%= occupantLabel(row) %>" data-occupant-id="<%= row.id %>"></option>
+        <div id="debt-occupant-<%= row.id %>" class="debt-occupant-option" role="option" aria-selected="false" data-occupant-id="<%= row.id %>"><%= occupantLabel(row) %></div>
       <% }) %>
-    </datalist>
-  </label>
+      <div class="debt-occupant-empty" role="status" hidden>No se encontraron ocupantes.</div>
+    </div>
+  </div>
   <div class="receipt-filters-actions"><button class="button" type="submit">Ver deudas</button></div>
 </form>
 <% if (occupant) { %>

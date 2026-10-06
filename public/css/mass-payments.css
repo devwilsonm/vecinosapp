@@ -1,0 +1,64 @@
+.mass-payment-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  grid-column: 1 / -1;
+  background: var(--surface-soft);
+}
+
+.mass-payment-summary div { display: grid; gap: 4px; }
+
+.mass-payment-summary span { color: var(--muted); font-size: 0.9rem; }
+
+.mass-payment-total { color: var(--amount-accent); font-size: 1.5rem; white-space: nowrap; }
+
+.mass-payment-selection {
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.mass-payment-selection legend { padding: 0 6px; font-weight: 700; }
+
+.mass-select-all { margin-bottom: 12px; }
+
+.mass-payment-list { display: grid; gap: 8px; }
+
+.mass-payment-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  font-weight: 500;
+}
+
+.mass-payment-row input { width: auto; }
+
+.mass-payment-info { display: grid; gap: 2px; min-width: 0; }
+
+.mass-payment-info span { color: var(--muted); font-size: 0.9rem; overflow-wrap: anywhere; }
+
+.mass-payment-row > strong { white-space: nowrap; }
+
+.mass-payment-confirm { margin-top: 4px; }
+
+.mass-payment-form .form-actions .button { gap: 8px; }
+
+@media (max-width: 800px) {
+.mass-payment-summary { align-items: flex-start; flex-direction: column; }
+
+.mass-payment-total { font-size: 1.35rem; }
+
+.mass-payment-row { grid-template-columns: auto minmax(0, 1fr); }
+
+.mass-payment-row > strong { grid-column: 2; }
+
+
+}

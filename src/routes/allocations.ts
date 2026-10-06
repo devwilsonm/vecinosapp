@@ -9,7 +9,6 @@ const { allocationRepository, buildingRepository, publicAllocationRepository } =
 const router = express.Router();
 
 const serviceLabels = Object.assign(Object.create(null), { agua: "Agua", luz: "Luz", internet: "Internet", otro: "Otro" });
-const serviceTypes = Object.keys(serviceLabels);
 
 type AllocationFormState = {
   selectedIds?: number[];

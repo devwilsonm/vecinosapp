@@ -11,6 +11,9 @@
   <meta name="theme-color" content="#0755b5">
   <link rel="stylesheet" href="/css/base.css?v=<%= assetVersion %>">
   <link rel="stylesheet" href="/css/content.css?v=<%= assetVersion %>">
+  <% if (typeof pageStyles !== "undefined") { pageStyles.forEach((stylesheet) => { %>
+    <link rel="stylesheet" href="/css/<%= stylesheet %>.css?v=<%= assetVersion %>">
+  <% }); } %>
   <link rel="stylesheet" href="/css/public.css?v=<%= assetVersion %>">
 </head>
 <body class="public-body">

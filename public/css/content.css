@@ -6,42 +6,6 @@
   margin-bottom: 18px;
 }
 
-.consumption-chart-list {
-  display: grid;
-  gap: 18px;
-}
-
-.consumption-chart-panel {
-  min-width: 0;
-  padding: 18px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.consumption-chart-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-
-.consumption-chart-heading h2,
-.consumption-chart-heading h3 {
-  margin: 0;
-  font-size: 1.05rem;
-}
-
-.consumption-chart-heading span {
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.consumption-chart {
-  width: 100%;
-  height: 360px;
-}
-
 .detail {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -76,110 +40,6 @@ tr:last-child td { border-bottom: 0; }
   border-top: 1px solid var(--line);
   border-radius: 0;
   margin: 0;
-}
-
-.allocation-table {
-  table-layout: fixed;
-}
-
-.allocation-table th:nth-child(1),
-.allocation-table td:nth-child(1) { width: 12%; }
-
-.allocation-table th:nth-child(2),
-.allocation-table td:nth-child(2) { width: 15%; }
-
-.allocation-table th:nth-child(3),
-.allocation-table td:nth-child(3) { width: 15%; }
-
-.allocation-table th:nth-child(4),
-.allocation-table td:nth-child(4) { width: 15%; }
-
-.allocation-table th:nth-child(5),
-.allocation-table td:nth-child(5) { width: 14%; }
-
-.allocation-table th:nth-child(6),
-.allocation-table td:nth-child(6) { width: 14%; }
-
-.allocation-table th:nth-child(7),
-.allocation-table td:nth-child(7) { width: 15%; }
-
-.accordion-list {
-  display: grid;
-  gap: 10px;
-}
-
-.floor-accordion {
-  overflow: hidden;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.floor-accordion summary {
-  display: grid;
-  grid-template-columns: 14px minmax(80px, 1fr) auto auto minmax(120px, 150px);
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  cursor: pointer;
-  list-style: none;
-}
-
-.floor-accordion summary::-webkit-details-marker {
-  display: none;
-}
-
-.floor-accordion summary::before {
-  content: "▸";
-  color: var(--primary);
-  font-weight: 800;
-}
-
-.floor-accordion[open] summary::before {
-  content: "▾";
-}
-
-.floor-title {
-  font-weight: 800;
-}
-
-.floor-meta {
-  color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.floor-balance {
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.floor-totals {
-  color: var(--muted);
-  font-size: 0.86rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.allocation-floor-totals {
-  display: flex;
-  justify-content: flex-end;
-  gap: 14px;
-  min-width: 0;
-}
-
-.allocation-floor-totals span:last-child {
-  color: var(--text);
-  font-size: inherit;
-  font-weight: 800;
-}
-
-.floor-progress {
-  display: grid;
-  gap: 5px;
-  min-width: 120px;
-  font-size: 0.86rem;
-  font-weight: 700;
 }
 
 .icon-action {
@@ -279,8 +139,6 @@ button.icon-action.danger:not(:disabled):hover,
 
 .share-action .action-icon { width: 21px; height: 21px; stroke-width: 2.2; }
 
-.user-role-field .role-info-trigger .action-icon { width: 16px; height: 16px; }
-
 .badge {
   display: inline-flex;
   border-radius: 999px;
@@ -369,42 +227,7 @@ button.icon-action.danger:not(:disabled):hover,
 @media (max-width: 800px) {
 .page-head { align-items: flex-start; flex-direction: column; }
 
-.consumption-chart-panel { padding: 14px; }
-
-.consumption-chart { height: 300px; }
-
-.floor-accordion summary {
-    grid-template-columns: 14px 1fr;
-    gap: 8px 10px;
-  }
-
-.floor-meta,
-.floor-balance,
-.floor-totals,
-.floor-progress {
-    grid-column: 2 / -1;
-  }
-
-.floor-balance {
-    justify-self: start;
-  }
-
-.floor-progress {
-    width: 100%;
-  }
-
-.allocation-floor-totals {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
-    justify-content: flex-start;
-    white-space: normal;
-  }
-
 table { display: block; overflow-x: auto; white-space: nowrap; }
-
-.allocation-table th:nth-child(n),
-.allocation-table td:nth-child(n) { width: auto; }
 
 .mobile-cards tbody td.actions .icon-action { width: 100%; }
 
@@ -472,20 +295,14 @@ table.mobile-cards {
     font-size: 0.88rem;
   }
 
-.mobile-cards tbody td.user-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
-.mobile-cards tbody td.user-actions form { width: 100%; }
-
-.mobile-cards tbody td.user-actions form .icon-action { width: 100%; }
-
-.mobile-cards tbody td.allocation-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
 .mobile-cards tbody td[colspan] {
     display: block;
     text-align: left;
   }
 
 .mobile-cards tbody td[colspan]::before { display: none; }
+
+
 }
 
 [data-theme="dark"] .icon-action,
@@ -531,205 +348,4 @@ table.mobile-cards {
   background: var(--surface-soft);
   border-color: var(--line);
   color: var(--muted);
-}
-.debt-report-table {
-  overflow-x: auto;
-}
-
-.debt-report-table table {
-  min-width: 560px;
-  table-layout: fixed;
-  font-variant-numeric: tabular-nums;
-}
-
-.debt-report-table .debt-amount {
-  text-align: right;
-  white-space: nowrap;
-}
-
-.debt-report-table thead th:first-child {
-  width: 24%;
-}
-
-.debt-report-table thead th:nth-child(2) {
-  width: 16%;
-}
-
-.debt-report-table thead .debt-amount {
-  width: 20%;
-}
-
-.debt-report-table tbody td:first-child {
-  overflow-wrap: anywhere;
-}
-
-.debt-report-table tbody .debt-amount {
-  font-size: 1.0625rem;
-  font-weight: 600;
-}
-
-.debt-report-table tbody .debt-balance {
-  background: var(--surface-muted);
-  color: var(--amount-accent);
-  font-weight: 800;
-}
-
-.debt-report-table tfoot th,
-.debt-report-table tfoot td {
-  background: var(--surface-soft);
-  color: var(--heading);
-  border-top: 2px solid var(--line);
-  padding-top: 14px;
-  padding-bottom: 14px;
-  font-size: 1rem;
-}
-
-.debt-report-table tfoot .debt-amount {
-  color: var(--amount-accent);
-  font-size: 1.25rem;
-}
-
-.debt-report-total {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px 24px;
-  background: var(--surface-soft);
-  margin-top: 28px;
-  font-size: 1.125rem;
-}
-
-.debt-report-total .debt-amount {
-  color: var(--amount-accent);
-  font-size: 1.75rem;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.occupant-consumption-values {
-  margin-top: 20px;
-}
-
-.occupant-consumption-values summary {
-  cursor: pointer;
-  color: var(--primary);
-  font-weight: 600;
-  padding: 12px 0;
-}
-
-.occupant-debts-page [hidden] {
-  display: none !important;
-}
-
-.occupant-debts-page.report-print-preparing #occupant-evolution-panel {
-  display: block !important;
-}
-
-[data-theme="dark"] .occupant-debts-page {
-  --amount-accent: var(--warning);
-}
-
-.occupant-evolution-print-capture {
-  width: 800px !important;
-  height: 400px !important;
-}
-
-.occupant-evolution-print-image {
-  display: none;
-}
-
-@media print {
-  .occupant-debts-page .topbar,
-  .occupant-debts-page .debt-report-actions,
-  .occupant-debts-page .alert,
-  .occupant-debts-page footer {
-    display: none !important;
-  }
-
-  .occupant-debts-page #occupant-evolution-panel {
-    display: block !important;
-    break-before: page;
-  }
-
-  .occupant-debts-page .occupant-evolution-print-image {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
-  .occupant-debts-page .consumption-chart:has(+ .occupant-evolution-print-image) {
-    display: none;
-  }
-
-  .occupant-debts-page .consumption-chart-panel {
-    background: white !important;
-    color: black !important;
-    break-inside: avoid;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
-
-  .occupant-debts-page .consumption-chart-heading span,
-  .occupant-debts-page .field-help {
-    color: black !important;
-  }
-
-  .occupant-debts-page .occupant-consumption-values {
-    display: block !important;
-    break-before: page;
-    break-inside: avoid;
-    margin-top: 0;
-  }
-
-  .occupant-debts-page .occupant-consumption-values th,
-  .occupant-debts-page .occupant-consumption-values td {
-    font-size: 10pt;
-    padding: 8px;
-  }
-
-  .occupant-debts-page .occupant-consumption-values summary {
-    color: black;
-    list-style: none;
-  }
-
-  .occupant-debts-page #occupant-debts-panel {
-    display: block !important;
-  }
-
-  .occupant-debts-page,
-  .occupant-debts-page table,
-  .occupant-debts-page th,
-  .occupant-debts-page td,
-  .occupant-debts-page .detail {
-    background: white !important;
-    color: black !important;
-  }
-
-  .occupant-debts-page .container {
-    max-width: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .occupant-debts-page .debt-amount {
-    color: black !important;
-  }
-
-  .occupant-debts-page .debt-report-table {
-    overflow: visible;
-  }
-
-  .occupant-debts-page table {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .occupant-debts-page tr {
-    break-inside: avoid;
-  }
-
-  .occupant-debts-page h2 {
-    break-after: avoid;
-  }
 }

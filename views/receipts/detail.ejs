@@ -1,4 +1,4 @@
-<%- include("../partials/header", { title: `Recibo ${receipt.receipt_number} | VecinosApp` }) %>
+<%- include("../partials/header", { title: `Recibo ${receipt.receipt_number} | VecinosApp`, pageStyles: ["floors","allocations"] }) %>
 <section class="page-head">
   <h1>Recibo <%= receipt.receipt_number %></h1>
   <div class="actions"><a class="button icon-action" href="/allocations/receipt/<%= receipt.id %>" title="Gestionar cuotas" aria-label="Gestionar cuotas"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="1.5"></circle><circle cx="12" cy="16" r="1.5"></circle><path d="M6 12h12"></path></svg></a><a class="icon-action" href="/receipts/<%= receipt.id %>/edit" title="Editar recibo" aria-label="Editar recibo"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></a></div>

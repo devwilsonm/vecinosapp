@@ -1,4 +1,4 @@
-<%- include("../partials/header", { title: `Prorratear ${receipt.receipt_number} | VecinosApp` }) %>
+<%- include("../partials/header", { title: `Prorratear ${receipt.receipt_number} | VecinosApp`, pageStyles: ["floors","allocations"] }) %>
 <section class="page-head"><h1>Prorratear <%= receipt.receipt_number %></h1></section>
 <%- include("../partials/errors", { errors }) %>
 <div class="detail allocation-receipt-summary">

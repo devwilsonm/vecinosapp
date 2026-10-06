@@ -1,0 +1,57 @@
+.consumption-chart-list {
+  display: grid;
+  gap: 18px;
+}
+
+.consumption-chart-panel {
+  min-width: 0;
+  padding: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.consumption-chart-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.consumption-chart-heading h2,
+.consumption-chart-heading h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.consumption-chart-heading span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.consumption-chart {
+  width: 100%;
+  height: 360px;
+}
+
+@media (max-width: 800px) {
+.consumption-chart-panel { padding: 14px; }
+
+.consumption-chart { height: 300px; }
+
+
+}
+
+.consumption-report {
+  margin-bottom: 34px;
+}
+
+.receipt-filters.consumption-filters {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+}
+
+@media (max-width: 800px) {
+.receipt-filters.consumption-filters { grid-template-columns: 1fr; }
+
+
+}

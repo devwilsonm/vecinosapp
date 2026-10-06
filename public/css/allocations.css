@@ -1,0 +1,153 @@
+.allocation-table {
+  table-layout: fixed;
+}
+
+.allocation-table th:nth-child(1),
+.allocation-table td:nth-child(1) { width: 12%; }
+
+.allocation-table th:nth-child(2),
+.allocation-table td:nth-child(2) { width: 15%; }
+
+.allocation-table th:nth-child(3),
+.allocation-table td:nth-child(3) { width: 15%; }
+
+.allocation-table th:nth-child(4),
+.allocation-table td:nth-child(4) { width: 15%; }
+
+.allocation-table th:nth-child(5),
+.allocation-table td:nth-child(5) { width: 14%; }
+
+.allocation-table th:nth-child(6),
+.allocation-table td:nth-child(6) { width: 14%; }
+
+.allocation-table th:nth-child(7),
+.allocation-table td:nth-child(7) { width: 15%; }
+
+.allocation-floor-totals {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  min-width: 0;
+}
+
+.allocation-floor-totals span:last-child {
+  color: var(--text);
+  font-size: inherit;
+  font-weight: 800;
+}
+
+@media (max-width: 800px) {
+.allocation-floor-totals {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+    justify-content: flex-start;
+    white-space: normal;
+  }
+
+.allocation-table th:nth-child(n),
+.allocation-table td:nth-child(n) { width: auto; }
+
+.mobile-cards tbody td.allocation-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+
+}
+
+.allocation-receipt-summary {
+  background: var(--surface-soft);
+  border-color: var(--primary);
+  box-shadow: 0 6px 16px var(--shadow);
+}
+
+.allocation-receipt-summary-title {
+  margin-top: 0;
+  color: var(--primary-dark);
+  font-size: 1.05rem;
+}
+
+.allocation-form {
+  --allocation-option-bg: var(--surface-muted);
+  --allocation-option-selected-bg: var(--surface-hover);
+  --allocation-option-selected-text: var(--text);
+}
+
+.allocation-form .check.item {
+  background: var(--allocation-option-bg);
+}
+
+.allocation-form .check.item.is-selected {
+  background: var(--allocation-option-selected-bg);
+  border-color: var(--primary);
+  color: var(--allocation-option-selected-text);
+  font-weight: 800;
+}
+
+.allocation-form .check.item.is-selected input { accent-color: var(--primary-dark); }
+
+.allocation-selection-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.allocation-selection-toolbar > span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.floor-select-control {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.allocation-selection-list .check-grid {
+  padding: 12px;
+}
+
+.allocation-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 10px 12px;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.allocation-summary strong.ok {
+  color: var(--success);
+}
+
+.allocation-type {
+  min-width: 130px;
+}
+
+.mixed-only,
+[hidden].mixed-only {
+  display: none;
+}
+
+.allocation-form.is-mixed .mixed-only {
+  display: table-cell;
+}
+
+@media (max-width: 800px) {
+.floor-select-control {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+
+
+}
+
+[data-theme="dark"] .allocation-selection-toolbar,
+[data-theme="dark"] .allocation-summary {
+  background: var(--surface-soft);
+  color: var(--text);
+}

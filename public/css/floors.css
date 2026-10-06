@@ -1,0 +1,97 @@
+.accordion-list {
+  display: grid;
+  gap: 10px;
+}
+
+.floor-accordion {
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.floor-accordion summary {
+  display: grid;
+  grid-template-columns: 14px minmax(80px, 1fr) auto auto minmax(120px, 150px);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.floor-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.floor-accordion summary::before {
+  content: "▸";
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.floor-accordion[open] summary::before {
+  content: "▾";
+}
+
+.floor-title {
+  font-weight: 800;
+}
+
+.floor-meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.floor-balance {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.floor-totals {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.floor-progress {
+  display: grid;
+  gap: 5px;
+  min-width: 120px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+@media (max-width: 800px) {
+.floor-accordion summary {
+    grid-template-columns: 14px 1fr;
+    gap: 8px 10px;
+  }
+
+.floor-meta,
+.floor-balance,
+.floor-totals,
+.floor-progress {
+    grid-column: 2 / -1;
+  }
+
+.floor-balance {
+    justify-self: start;
+  }
+
+.floor-progress {
+    width: 100%;
+  }
+
+
+}
+
+.floor-section h2 {
+  margin-top: 0;
+}
+
+.occupant-group {
+  margin-bottom: 28px;
+}

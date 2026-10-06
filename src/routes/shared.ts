@@ -1,6 +1,6 @@
 const express = require("express");
 const { buildingRepository, publicAllocationRepository, publicReportRepository, reportRepository } = require("../infrastructure/container");
-const { buildConsumptionCharts, nextMonth, serviceLabels, serviceTypes, serviceUnits } = require("../domain/reports/consumptionReport");
+const { buildConsumptionCharts, nextMonth, serviceLabels, serviceUnits } = require("../domain/reports/consumptionReport");
 
 const router = express.Router();
 

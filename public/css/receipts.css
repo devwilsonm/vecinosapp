@@ -1,0 +1,51 @@
+.receipt-results-meta {
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.receipt-service-list {
+  display: grid;
+  gap: 26px;
+}
+
+.receipt-service-group {
+  min-width: 0;
+}
+
+.receipt-service-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.receipt-service-head > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.receipt-service-head h2 {
+  margin: 0;
+}
+
+.receipt-service-head > strong {
+  color: var(--amount-accent);
+  white-space: nowrap;
+}
+
+.receipt-service-count {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+@media (max-width: 800px) {
+.receipt-service-head { align-items: flex-start; flex-direction: column; gap: 6px; }
+
+.receipt-service-head > div { align-items: baseline; }
+
+
+}

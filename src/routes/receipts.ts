@@ -12,7 +12,6 @@ const router = express.Router();
 router.use(requirePermission("receipts.manage"));
 
 const serviceLabels = Object.assign(Object.create(null), { agua: "Agua", luz: "Luz", internet: "Internet", otro: "Otro" });
-const serviceTypes = Object.keys(serviceLabels);
 
 function redirectWith(res, url, message, type = "success") {
   res.redirect(`${url}?message=${encodeURIComponent(message)}&type=${type}`);
