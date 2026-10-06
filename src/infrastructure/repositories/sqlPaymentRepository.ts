@@ -6,7 +6,7 @@ export class SqlPaymentRepository implements PaymentRepository {
 
   listPendingByBuilding(buildingId: number) {
     return this.database.prepare(`
-      SELECT a.*, o.full_name, o.floor, o.unit, r.receipt_number, r.period, b.name AS building_name
+      SELECT a.*, o.full_name, o.floor, o.unit, r.receipt_number, r.service_type, r.period, b.name AS building_name
       FROM receipt_allocations a
       JOIN occupants o ON a.occupant_id = o.id
       JOIN receipts r ON a.receipt_id = r.id
@@ -30,7 +30,7 @@ export class SqlPaymentRepository implements PaymentRepository {
 
   listByBuilding(buildingId: number) {
     return this.database.prepare(`
-      SELECT p.*, o.full_name, o.floor, o.unit, r.receipt_number, r.period, b.name AS building_name
+      SELECT p.*, o.full_name, o.floor, o.unit, r.receipt_number, r.service_type, r.period, b.name AS building_name
       FROM payments p
       JOIN receipt_allocations a ON p.allocation_id = a.id
       JOIN occupants o ON a.occupant_id = o.id
