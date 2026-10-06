@@ -14,11 +14,16 @@
   <div class="receipt-filters-actions"><button class="button" type="submit">Ver deudas</button></div>
 </form>
 <% if (occupant) { %>
-  <section aria-label="Estado de deuda">
+  <section aria-label="Reporte del ocupante" data-occupant-report>
     <div class="page-head">
       <div><h2><%= occupant.full_name %></h2><p><%= occupant.building_name || "Sin edificio" %> · Piso <%= occupant.floor %> · Unidad <%= occupant.unit %></p></div>
-      <% if (periods.length) { %><button class="button secondary debt-report-actions" type="button" data-print-debt-report>Imprimir / Guardar PDF</button><% } %>
+      <% if (periods.length || evolutionCharts.length) { %><button class="button secondary debt-report-actions" type="button" data-print-debt-report>Imprimir / Guardar PDF</button><% } %>
     </div>
+    <div class="tabs debt-report-actions" role="tablist" aria-label="Información del ocupante" data-report-tabs>
+      <button class="tab-button active" id="occupant-debts-tab" type="button" role="tab" aria-controls="occupant-debts-panel" aria-selected="true" data-tab-target="occupant-debts-panel">Deudas</button>
+      <button class="tab-button" id="occupant-evolution-tab" type="button" role="tab" aria-controls="occupant-evolution-panel" aria-selected="false" tabindex="-1" data-tab-target="occupant-evolution-panel">Evolución</button>
+    </div>
+    <div class="tab-panel active" id="occupant-debts-panel" role="tabpanel" aria-labelledby="occupant-debts-tab" tabindex="0">
     <% periods.forEach((group) => { %>
       <h2><%= group.period %></h2>
       <div class="debt-report-table">
@@ -32,7 +37,29 @@
       </div>
     <% }) %>
     <% if (periods.length) { %><p class="detail debt-report-total"><strong>Total pendiente</strong><strong class="debt-amount">S/ <%= money(totalBalanceCents) %></strong></p><% } else { %><p class="detail">Este ocupante no tiene deudas pendientes.</p><% } %>
+    </div>
+    <div class="tab-panel" id="occupant-evolution-panel" role="tabpanel" aria-labelledby="occupant-evolution-tab" tabindex="0" hidden>
+      <h2>Evolución del gasto en servicios</h2>
+      <p>Últimos seis meses · Monto asignado al ocupante, haya pagado o no. Cada columna muestra el total del período en soles, desglosado por servicio.</p>
+      <p class="field-help">Incluye cuotas fijas y servicios medidos. Se usa el período del recibo; si no identifica un mes, se usa su fecha de emisión. Los meses sin cargos se muestran en cero.</p>
+      <% if (evolutionCharts.length) { %>
+        <section class="consumption-chart-panel">
+          <div class="consumption-chart-heading"><div><h3>Gasto mensual en soles (S/)</h3><span><%= evolutionCharts.map((report) => report.label).join(" · ") %></span></div></div>
+          <div id="occupant-evolution-chart-0" class="consumption-chart" role="img" aria-label="Montos mensuales asignados en soles por todos los servicios del ocupante"></div>
+        </section>
+        <details class="occupant-consumption-values">
+          <summary>Ver valores por período</summary>
+          <div class="debt-report-table"><table><thead><tr><th scope="col">Período</th><% evolutionCharts.forEach((report) => { %><th scope="col"><%= report.label %></th><% }) %><th scope="col">Total</th></tr></thead><tbody>
+          <% evolutionCharts[0].data.forEach((point, index) => { %><tr><th scope="row"><%= point.category %></th><% evolutionCharts.forEach((report) => { %><td>S/ <%= money(Math.round(report.data[index].value * 100)) %></td><% }) %><td><strong>S/ <%= money(evolutionCharts.reduce((total, report) => total + Math.round(report.data[index].value * 100), 0)) %></strong></td></tr><% }) %>
+          </tbody></table></div>
+        </details>
+        <script id="occupantEvolutionData" type="application/json"><%- JSON.stringify([evolutionCharts]).replace(/</g, '\\u003c') %></script>
+      <% } else { %>
+        <p class="detail">Este ocupante no tiene montos asignados por servicios en los últimos seis meses.</p>
+      <% } %>
+    </div>
   </section>
+  <script src="/js/consumption-chart.js?v=<%= assetVersion %>" defer></script>
 <% } else { %>
   <p class="detail"><%= occupants.length ? "Selecciona un ocupante para consultar todos sus recibos pendientes." : "No hay ocupantes disponibles." %></p>
 <% } %>

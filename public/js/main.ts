@@ -1,7 +1,18 @@
 // Browser script migrated from JavaScript; DOM typing is kept permissive while the UI is incrementally typed.
 // @ts-nocheck
 
-document.querySelector("[data-print-debt-report]")?.addEventListener("click", () => window.print());
+document.querySelector("[data-print-debt-report]")?.addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    const preparation = { pending: [] };
+    document.dispatchEvent(new CustomEvent("vecinosapp:prepare-report-print", { detail: preparation }));
+    await Promise.all(preparation.pending);
+    window.print();
+  } finally {
+    button.disabled = false;
+  }
+});
 
 const debtOccupantSearch = document.querySelector("[data-debt-occupant-search]");
 const debtOccupantId = document.querySelector("[data-debt-occupant-id]");
@@ -188,8 +199,29 @@ document.querySelectorAll(".auto-submit").forEach((field) => {
 document.querySelectorAll(".tab-button").forEach((button) => {
   button.addEventListener("click", () => {
     const targetId = button.dataset.tabTarget;
-    document.querySelectorAll(".tab-button").forEach((item) => item.classList.toggle("active", item === button));
-    document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.toggle("active", panel.id === targetId));
+    const report = button.closest("[data-occupant-report]");
+    const scope = report || document;
+    scope.querySelectorAll(".tab-button").forEach((item) => {
+      item.classList.toggle("active", item === button);
+      if (report) {
+        item.setAttribute("aria-selected", String(item === button));
+        item.tabIndex = item === button ? 0 : -1;
+      }
+    });
+    scope.querySelectorAll(".tab-panel").forEach((panel) => {
+      panel.classList.toggle("active", panel.id === targetId);
+      if (report) panel.hidden = panel.id !== targetId;
+    });
+    if (report) document.dispatchEvent(new CustomEvent("vecinosapp:report-tab-changed", { detail: targetId }));
+  });
+  if (button.closest("[data-report-tabs]")) button.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const buttons = [...button.parentElement.querySelectorAll(".tab-button")];
+    const index = buttons.indexOf(button);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + buttons.length) % buttons.length;
+    buttons[next].focus();
+    buttons[next].click();
   });
 });
 

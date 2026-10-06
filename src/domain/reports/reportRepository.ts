@@ -1,4 +1,5 @@
 export interface ReportRepository {
+  assignedAmountsForOccupant(canAccessAll: boolean, buildingIds: number[], occupantId: number): Promise<Record<string, any>[]>;
   pendingDebtsForOccupant(canAccessAll: boolean, buildingIds: number[], occupantId: number): Promise<Record<string, any>[]>;
   debtsByOccupant(canAccessAll: boolean, buildingIds: number[]): Promise<Record<string, any>[]>;
   pendingReceipts(canAccessAll: boolean, buildingIds: number[]): Promise<Record<string, any>[]>;

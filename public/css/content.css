@@ -607,8 +607,36 @@ table.mobile-cards {
   white-space: nowrap;
 }
 
+.occupant-consumption-values {
+  margin-top: 20px;
+}
+
+.occupant-consumption-values summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 600;
+  padding: 12px 0;
+}
+
+.occupant-debts-page [hidden] {
+  display: none !important;
+}
+
+.occupant-debts-page.report-print-preparing #occupant-evolution-panel {
+  display: block !important;
+}
+
 [data-theme="dark"] .occupant-debts-page {
   --amount-accent: var(--warning);
+}
+
+.occupant-evolution-print-capture {
+  width: 800px !important;
+  height: 400px !important;
+}
+
+.occupant-evolution-print-image {
+  display: none;
 }
 
 @media print {
@@ -617,6 +645,56 @@ table.mobile-cards {
   .occupant-debts-page .alert,
   .occupant-debts-page footer {
     display: none !important;
+  }
+
+  .occupant-debts-page #occupant-evolution-panel {
+    display: block !important;
+    break-before: page;
+  }
+
+  .occupant-debts-page .occupant-evolution-print-image {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .occupant-debts-page .consumption-chart:has(+ .occupant-evolution-print-image) {
+    display: none;
+  }
+
+  .occupant-debts-page .consumption-chart-panel {
+    background: white !important;
+    color: black !important;
+    break-inside: avoid;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .occupant-debts-page .consumption-chart-heading span,
+  .occupant-debts-page .field-help {
+    color: black !important;
+  }
+
+  .occupant-debts-page .occupant-consumption-values {
+    display: block !important;
+    break-before: page;
+    break-inside: avoid;
+    margin-top: 0;
+  }
+
+  .occupant-debts-page .occupant-consumption-values th,
+  .occupant-debts-page .occupant-consumption-values td {
+    font-size: 10pt;
+    padding: 8px;
+  }
+
+  .occupant-debts-page .occupant-consumption-values summary {
+    color: black;
+    list-style: none;
+  }
+
+  .occupant-debts-page #occupant-debts-panel {
+    display: block !important;
   }
 
   .occupant-debts-page,

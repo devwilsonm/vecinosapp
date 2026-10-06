@@ -35,6 +35,19 @@ export class SqlReportRepository implements ReportRepository {
     `).all(occupantId, ...access.params);
   }
 
+  assignedAmountsForOccupant(canAccessAll: boolean, buildingIds: number[], occupantId: number) {
+    const access = this.access(canAccessAll, buildingIds, "r.building_id");
+    return this.database.prepare(`
+      SELECT r.service_type, r.period, SUBSTR(r.issue_date, 1, 7) AS issue_month,
+        SUM(a.assigned_amount_cents) AS amount_cents
+      FROM receipt_allocations a
+      JOIN receipts r ON a.receipt_id = r.id
+      WHERE a.occupant_id = ?${access.sql}
+      GROUP BY r.service_type, r.period, SUBSTR(r.issue_date, 1, 7)
+      ORDER BY issue_month, r.service_type
+    `).all(occupantId, ...access.params);
+  }
+
   pendingReceipts(canAccessAll: boolean, buildingIds: number[]) {
     const access = this.access(canAccessAll, buildingIds, "r.building_id");
     return this.database.prepare(`SELECT * FROM receipts r WHERE status != 'pagado'${access.sql} ORDER BY due_date`).all(...access.params);
