@@ -132,8 +132,8 @@ function checkSecurityGuards() {
   addCheck("Logout usa CSRF", header.includes('action="/logout"') && header.includes('name="_csrf"'));
   addCheck("Auditoría excluye rutas técnicas", server.includes("shouldAuditRequest") && server.includes("/favicon/") && server.includes("/.well-known/"));
   addCheck("Auditoría guarda acción y mensaje", read("src/logDb.js").includes("action TEXT") && read("src/logDb.js").includes("message TEXT"));
-  addCheck("Permisos cargados en sesión", server.includes("req.currentUser.permissions") && server.includes("listPermissionKeys"));
-  addCheck("Edificios asignados cargados en sesión", server.includes("req.currentUser.building_ids") && server.includes("listBuildingIds"));
+  addCheck("Permisos cargados en sesión", server.includes("getSessionUser(session, userRepository)") && auth.includes("user.permissions") && auth.includes("listPermissionKeys"));
+  addCheck("Edificios asignados cargados en sesión", server.includes("getSessionUser(session, userRepository)") && auth.includes("user.building_ids") && auth.includes("listBuildingIds"));
   addCheck("Helper de aislamiento por edificio disponible", buildingAccess.includes("function ensureBuildingAccess") && buildingAccess.includes("function buildingFilter"));
   addCheck("Navbar respeta permisos", header.includes('hasPermission("buildings.manage")') && header.includes('hasPermission("receipts.manage")'));
   [
@@ -236,7 +236,7 @@ function checkPerformance() {
   addCheck("JavaScript compilado con defer", footer.includes('src="/js/main.js?v=<%= assetVersion %>" defer'));
   addCheck("Build minifica CSS con esbuild", build.includes("function minifyCss") && build.includes('loader: "css"'));
   addCheck("Build procesa todos los JavaScript con esbuild", build.includes("function minifyJavaScriptFiles") && build.includes("esbuild.transformSync") && build.includes('path.join(root, "public", "js", "main.ts")'));
-  addCheck("Cache de páginas separado por usuario", cache.includes("req.currentUser?.id"));
+  addCheck("Cache HTML separado por sesión y CSRF", cache.includes("req.session.cacheKey") && cache.includes("res.locals.csrfToken") && cache.includes("userId: req.currentUser.id"));
 }
 
 function checkUnusedPartials() {

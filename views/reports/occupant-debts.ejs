@@ -65,4 +65,4 @@
 <% } else { %>
   <p class="detail"><%= occupants.length ? "Selecciona un ocupante para consultar todos sus recibos pendientes." : "No hay ocupantes disponibles." %></p>
 <% } %>
-<%- include("../partials/footer") %>
+<%- include("../partials/footer", { pageScripts: ["tabs","occupant-debts"] }) %>

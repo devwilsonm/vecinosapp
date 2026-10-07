@@ -86,4 +86,4 @@
   <span><%= ((page - 1) * pageSize) + (logs.length ? 1 : 0) %>-<%= ((page - 1) * pageSize) + logs.length %> de <%= totalLogs %></span>
   <a class="button <%= page >= totalPages ? "disabled" : "" %>" href="<%= page >= totalPages ? "#" : "/admin/logs?" + nextParams.toString() %>">Siguiente</a>
 </div>
-<%- include("../partials/footer") %>
+<%- include("../partials/footer", { pageScripts: ["local-datetime"] }) %>

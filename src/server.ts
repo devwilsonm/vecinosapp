@@ -11,7 +11,7 @@ const { formatCents } = require("./utils/money");
 const { rateLimit } = require("./utils/rateLimit");
 const { csrfProtection, securityHeaders } = require("./utils/security");
 const { statusClass } = require("./utils/view");
-const { readSession } = require("./utils/auth");
+const { getSessionUser, readSession } = require("./utils/auth");
 const { hasPermission, isSuperAdmin } = require("./utils/access");
 const { userRepository } = require("./infrastructure/container");
 
@@ -172,13 +172,8 @@ app.use(async (req, res, next) => {
   if (!databaseReady || isNoisePath(req.path) || (req.method === "POST" && ["/login", "/logout"].includes(req.path))) return next();
   try {
     const session = readSession(req);
-    req.currentUser = session ? (await userRepository.findSessionUser(session.userId)) : null;
-    if (req.currentUser) {
-      [req.currentUser.permissions, req.currentUser.building_ids] = await Promise.all([
-        userRepository.listPermissionKeys(req.currentUser.role_id),
-        userRepository.listBuildingIds(req.currentUser.id)
-      ]);
-    }
+    req.session = session;
+    req.currentUser = await getSessionUser(session, userRepository);
     res.locals.currentUser = req.currentUser;
     if (!res.locals.publicTheme && req.currentUser?.theme) res.locals.publicTheme = req.currentUser.theme;
     res.locals.isSuperAdmin = isSuperAdmin(req.currentUser);

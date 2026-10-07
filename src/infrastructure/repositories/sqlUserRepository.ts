@@ -17,7 +17,7 @@ export class SqlUserRepository implements UserRepository {
       SELECT u.id, u.role_id, u.full_name, u.email, u.theme, r.name AS role_name, r.key AS role_key
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
-      WHERE u.id = ? AND u.is_active = 1
+      WHERE u.id = ? AND u.is_active = 1 AND r.is_active = 1
     `).get(userId);
   }
 

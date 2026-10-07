@@ -72,4 +72,4 @@
   <% if (!paidFloors.length) { %><div class="detail">No hay pagos registrados para este edificio.</div><% } %>
 </section>
 
-<%- include("../partials/footer") %>
+<%- include("../partials/footer", { pageScripts: ["auto-submit","tabs"] }) %>

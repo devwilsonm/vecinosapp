@@ -1,5 +1,5 @@
 const express = require("express");
-const { hashPassword } = require("../utils/auth");
+const { hashPassword, invalidateSessionUsers } = require("../utils/auth");
 const { canAccessAllBuildings, requirePublicLinkSettingsAccess, requireSuperAdmin } = require("../utils/access");
 const { ensureBuildingAccess, permittedBuildingIds } = require("../utils/buildingAccess");
 const { cleanText } = require("../utils/validation");
@@ -158,6 +158,7 @@ router.put("/users/:id", async (req, res) => {
   }
 
   await userRepository.update(req.params.id, { role_id: Number(req.body.role_id), full_name: cleanText(req.body.full_name, 160), email, password_hash: req.body.password ? hashPassword(req.body.password) : undefined, is_active: req.body.is_active ? 1 : 0 }, assignedBuildings, req.currentUser.id);
+  invalidateSessionUsers(req.params.id);
   redirectWith(res, "/admin/users", "Usuario actualizado correctamente.");
 });
 
@@ -166,6 +167,7 @@ router.post("/users/:id/deactivate", async (req, res) => {
     return redirectWith(res, "/admin/users", "No puedes desactivar tu propio usuario.", "danger");
   }
   await userRepository.deactivate(req.params.id, req.currentUser.id);
+  invalidateSessionUsers(req.params.id);
   redirectWith(res, "/admin/users", "Usuario desactivado.");
 });
 
@@ -238,6 +240,7 @@ router.put("/roles/:id", async (req, res) => {
   }
 
   await roleRepository.update(req.params.id, { name: cleanText(req.body.name, 120), description: cleanText(req.body.description, 500), is_active: req.body.is_active ? 1 : 0 }, selectedPermissions, req.currentUser.id);
+  invalidateSessionUsers(null, req.params.id);
   redirectWith(res, "/admin/roles", "Perfil actualizado correctamente.");
 });
 

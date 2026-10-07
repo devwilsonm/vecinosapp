@@ -125,7 +125,12 @@ for (const config of ["tsconfig.browser.json", "tsconfig.browser.chart.json"]) {
 }
 
 esbuild.buildSync({
-  entryPoints: [path.join(root, "public", "js", "main.ts"), path.join(root, "public", "js", "theme.ts"), path.join(root, "public", "js", "share.ts")],
+  entryPoints: [
+    path.join(root, "public", "js", "main.ts"),
+    ...fs.readdirSync(path.join(root, "public", "js"))
+      .filter((file) => file.endsWith(".ts") && !["main.ts", "consumption-chart.ts"].includes(file))
+      .map((file) => path.join(root, "public", "js", file))
+  ],
   bundle: true,
   format: "iife",
   minify: true,

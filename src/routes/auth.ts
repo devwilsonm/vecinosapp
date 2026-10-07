@@ -1,6 +1,5 @@
 const express = require("express");
-const { clearSession, setSession, verifyPassword } = require("../utils/auth");
-const { invalidatePageCache } = require("../utils/cache");
+const { clearSession, invalidateSessionUsers, loadSessionUser, readSession, setSession, verifyPassword } = require("../utils/auth");
 const { rateLimit } = require("../utils/rateLimit");
 const { userRepository } = require("../infrastructure/container");
 
@@ -36,9 +35,16 @@ router.post("/login", loginRateLimit, async (req, res) => {
     req.auditMessage = "Intento de login fallido.";
     return res.status(401).render("auth/login", { errors: ["Correo o contraseña incorrectos."] });
   }
-  req.currentUser = { id: user.id, full_name: user.full_name, email: user.email };
-  req.auditMessage = "Inicio de sesión correcto.";
-  setSession(res, user.id);
+  try {
+    const sessionUser = await loadSessionUser(user.id, userRepository);
+    if (!sessionUser) return res.status(401).render("auth/login", { errors: ["Correo o contraseña incorrectos."] });
+    setSession(res, user.id, sessionUser);
+    req.currentUser = sessionUser;
+    req.auditMessage = "Inicio de sesión correcto.";
+  } catch (error) {
+    console.error("No se pudieron cargar los permisos de la sesión.", error?.code || "DATABASE_ERROR");
+    return unavailable();
+  }
   res.redirect("/");
 });
 
@@ -46,12 +52,14 @@ router.post("/theme", async (req, res) => {
   if (!req.currentUser) return res.status(401).json({ error: "Sesión no válida." });
   if (!["light", "dark"].includes(req.body.theme)) return res.status(400).json({ error: "Tema no válido." });
   await userRepository.updateTheme(req.currentUser.id, req.body.theme);
-  invalidatePageCache();
+  invalidateSessionUsers(req.currentUser.id);
   res.json({ theme: req.body.theme });
 });
 
 router.post("/logout", (req, res) => {
   req.auditMessage = "Cierre de sesión.";
+  const session = readSession(req);
+  if (session) invalidateSessionUsers(session.userId);
   clearSession(res);
   res.redirect("/login");
 });

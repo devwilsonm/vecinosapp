@@ -56,4 +56,4 @@
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <button class="danger" type="submit">Eliminar recibo</button>
 </form>
-<%- include("../partials/footer") %>
+<%- include("../partials/footer", { pageScripts: ["confirmations"] }) %>

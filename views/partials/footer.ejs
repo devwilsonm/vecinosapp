@@ -1,8 +1,10 @@
   </main>
   <script src="/js/theme.js?v=<%= assetVersion %>" defer></script>
   <% if (typeof loginPage === "undefined" || !loginPage) { %>
-    <script src="/js/share.js?v=<%= assetVersion %>" defer></script>
     <script src="/js/main.js?v=<%= assetVersion %>" defer></script>
+    <% if (typeof pageScripts !== "undefined") { pageScripts.forEach((script) => { %>
+      <script src="/js/<%= script %>.js?v=<%= assetVersion %>" defer></script>
+    <% }); } %>
   <% } %>
 </body>
 </html>
