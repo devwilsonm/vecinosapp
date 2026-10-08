@@ -10,7 +10,7 @@
   <div class="stat stat-warning"><span>Intentos de login</span><strong><%= summary.loginEvents %></strong></div>
 </section>
 
-<form method="get" action="/admin/logs" class="form">
+<form method="get" data-partial-filter action="/admin/logs" class="form">
   <label>Correo o usuario
     <input type="search" name="email" value="<%= filters.email || "" %>" placeholder="admin@vecinosapp.local">
   </label>
@@ -33,6 +33,7 @@
     <a href="/admin/logs">Limpiar</a>
   </div>
 </form>
+<div data-partial-results>
 
 <div class="section-head">
   <h2>Últimos eventos</h2>
@@ -85,5 +86,6 @@
   <a class="button <%= page <= 1 ? "disabled" : "" %>" href="<%= page <= 1 ? "#" : "/admin/logs?" + previousParams.toString() %>">Anterior</a>
   <span><%= ((page - 1) * pageSize) + (logs.length ? 1 : 0) %>-<%= ((page - 1) * pageSize) + logs.length %> de <%= totalLogs %></span>
   <a class="button <%= page >= totalPages ? "disabled" : "" %>" href="<%= page >= totalPages ? "#" : "/admin/logs?" + nextParams.toString() %>">Siguiente</a>
+</div>
 </div>
 <%- include("../partials/footer", { pageScripts: ["local-datetime"] }) %>

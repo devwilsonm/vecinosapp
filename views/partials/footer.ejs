@@ -1,4 +1,12 @@
   </main>
+  <div class="loading-overlay" data-loading-overlay hidden>
+    <div class="loading-indicator" role="status" aria-live="polite" aria-atomic="true">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <span data-loading-message>Cargando…</span>
+    </div>
+  </div>
+  <script src="/js/partial-updates.js?v=<%= assetVersion %>" defer></script>
+  <script src="/js/loader.js?v=<%= assetVersion %>" defer></script>
   <script src="/js/theme.js?v=<%= assetVersion %>" defer></script>
   <% if (typeof loginPage === "undefined" || !loginPage) { %>
     <script src="/js/main.js?v=<%= assetVersion %>" defer></script>

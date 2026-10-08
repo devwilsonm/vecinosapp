@@ -1,7 +1,7 @@
 <%- include("../partials/header", { title: "Reportes por consumo | VecinosApp", pageStyles: ["charts"] }) %>
 <section class="page-head"><h1>Reportes por consumo</h1><a href="/reports">Volver a reportes</a></section>
 <section class="consumption-report">
-  <form class="receipt-filters consumption-filters" method="get" action="/reports/consumption">
+  <form class="receipt-filters consumption-filters" method="get" data-partial-filter action="/reports/consumption">
     <label>Desde
       <input type="month" name="from" value="<%= selectedFrom %>">
     </label>
@@ -29,6 +29,7 @@
       <a href="/reports/consumption">Restablecer</a>
     </div>
   </form>
+<div data-partial-results>
   <div class="share-toolbar">
     <form method="post" action="/reports/consumption/share" class="inline-form">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -61,8 +62,6 @@
   <% } else { %>
     <div class="detail">No hay consumos registrados para el intervalo seleccionado.</div>
   <% } %>
+</div>
 </section>
-<% if (consumptionCharts.length) { %>
-<script src="/js/consumption-chart.js?v=<%= assetVersion %>" defer></script>
-<% } %>
-<%- include("../partials/footer") %>
+<%- include("../partials/footer", { pageScripts: ["consumption-chart"] }) %>

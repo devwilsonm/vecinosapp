@@ -151,6 +151,10 @@
   display: none;
 }
 
+@media screen and (max-width: 800px) {
+  .occupant-debts-page [data-print-debt-report] { align-self: center; }
+}
+
 @media print {
 .occupant-debts-page .topbar,
 .occupant-debts-page .debt-report-actions,

@@ -1,18 +1,23 @@
 // @ts-nocheck
 export {};
 
-document.querySelector("[data-print-debt-report]")?.addEventListener("click", async (event) => {
-  const button = event.currentTarget;
-  button.disabled = true;
-  try {
-    const preparation = { pending: [] };
-    document.dispatchEvent(new CustomEvent("vecinosapp:prepare-report-print", { detail: preparation }));
-    await Promise.all(preparation.pending);
-    window.print();
-  } finally {
-    button.disabled = false;
-  }
-});
+function initializeDebtReportActions() {
+  document.querySelector("[data-print-debt-report]")?.addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const preparation = { pending: [] };
+      document.dispatchEvent(new CustomEvent("vecinosapp:prepare-report-print", { detail: preparation }));
+      await Promise.all(preparation.pending);
+      window.print();
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
+initializeDebtReportActions();
+document.addEventListener("vecinosapp:results-updated", initializeDebtReportActions);
 
 const debtOccupantSearch = document.querySelector("[data-debt-occupant-search]");
 const debtOccupantId = document.querySelector("[data-debt-occupant-id]");

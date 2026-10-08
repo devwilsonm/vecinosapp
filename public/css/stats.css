@@ -40,6 +40,8 @@
 
 .stat strong { font-size: 2rem; }
 
+.dashboard-stats .stat strong { display: block; text-align: center; }
+
 .stat-link {
   color: var(--text);
 }

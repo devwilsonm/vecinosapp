@@ -1,6 +1,6 @@
 <%- include("../partials/header", { title: "Prorrateos | VecinosApp", pageStyles: ["allocations","receipts"] }) %>
 <section class="page-head"><h1>Prorrateos</h1></section>
-<form class="receipt-filters" method="get" action="/allocations">
+<form class="receipt-filters" method="get" data-partial-filter action="/allocations">
   <label>A&ntilde;o
     <select name="year">
       <% years.forEach((year) => { %>
@@ -30,6 +30,7 @@
     <a href="/allocations">Restablecer</a>
   </div>
 </form>
+<div data-partial-results>
 <div class="receipt-results-meta"><span><strong><%= receiptCount %></strong> prorrateos encontrados</span></div>
 <% if (receiptsByService.length) { %>
   <div class="receipt-service-list">
@@ -59,4 +60,5 @@
 <% } else { %>
   <div class="detail">No hay prorrateos que coincidan con los filtros seleccionados.</div>
 <% } %>
+</div>
 <%- include("../partials/footer") %>

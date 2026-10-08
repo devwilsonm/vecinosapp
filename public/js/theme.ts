@@ -39,6 +39,7 @@ document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
     }
     document.cookie = `vecinosapp_theme=${nextTheme}; Max-Age=31536000; Path=/; SameSite=Lax`;
     if (!isAuthenticated) return;
+    document.dispatchEvent(new Event("vecinosapp:loading-start"));
     try {
       const response = await fetch("/theme", {
         method: "POST",
@@ -48,6 +49,8 @@ document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
       if (!response.ok) throw new Error("No se pudo guardar el tema.");
     } catch (error) {
       console.error(error);
+    } finally {
+      document.dispatchEvent(new Event("vecinosapp:loading-end"));
     }
   });
 });

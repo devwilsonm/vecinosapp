@@ -1,7 +1,7 @@
 <%- include("partials/header", { title: "Dashboard | VecinosApp", pageStyles: ["floors","stats"] }) %>
 <section class="page-head">
   <h1>Dashboard</h1>
-  <form method="get" class="dashboard-filter">
+  <form method="get" data-partial-filter class="dashboard-filter">
     <label>Edificio
       <select name="building_id" class="auto-submit">
         <% buildings.forEach((building) => { %>
@@ -11,7 +11,8 @@
     </label>
   </form>
 </section>
-<section class="stats-grid">
+<div data-partial-results>
+<section class="stats-grid dashboard-stats">
   <div class="stat stat-info"><span>Ocupantes</span><strong><%= totalOccupants %></strong></div>
   <div class="stat stat-success"><span>Recibos</span><strong><%= totalReceipts %></strong></div>
   <div class="stat stat-warning"><span>Recibos pendientes</span><strong><%= pendingReceipts %></strong></div>
@@ -69,4 +70,5 @@
     <% } %>
   </div>
 </section>
+</div>
 <%- include("partials/footer", { pageScripts: ["auto-submit","stats-carousel"] }) %>

@@ -1,6 +1,6 @@
 <%- include("../partials/header", { title: "Recibos | VecinosApp", pageStyles: ["receipts"] }) %>
 <section class="page-head"><h1>Recibos</h1><a class="button" href="/receipts/new">Nuevo recibo</a></section>
-<form class="receipt-filters" method="get" action="/receipts">
+<form class="receipt-filters" method="get" data-partial-filter action="/receipts">
   <label>A&ntilde;o
     <select name="year">
       <% years.forEach((year) => { %>
@@ -30,6 +30,7 @@
     <a href="/receipts">Restablecer</a>
   </div>
 </form>
+<div data-partial-results>
 <div class="receipt-results-meta"><span><strong><%= receiptCount %></strong> recibos encontrados</span></div>
 <% if (receiptsByService.length) { %>
   <div class="receipt-service-list">
@@ -65,4 +66,5 @@
 <% } else { %>
   <div class="detail">No hay recibos que coincidan con los filtros seleccionados.</div>
 <% } %>
+</div>
 <%- include("../partials/footer") %>

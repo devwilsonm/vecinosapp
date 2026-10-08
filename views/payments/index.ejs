@@ -1,7 +1,7 @@
 <%- include("../partials/header", { title: "Pagos | VecinosApp", pageStyles: ["floors","stats"] }) %>
 <section class="page-head">
   <h1>Pagos</h1>
-  <form method="get" class="dashboard-filter">
+  <form method="get" data-partial-filter class="dashboard-filter">
     <label>Edificio
       <select name="building_id" class="auto-submit">
         <% buildings.forEach((building) => { %>
@@ -12,6 +12,7 @@
   </form>
 </section>
 
+<div data-partial-results>
 <div class="tabs" role="tablist" aria-label="Secciones de pagos">
   <button class="tab-button active" type="button" data-tab-target="pendingTab">Deudas pendientes</button>
   <button class="tab-button" type="button" data-tab-target="paidTab">Pagos registrados</button>
@@ -72,4 +73,5 @@
   <% if (!paidFloors.length) { %><div class="detail">No hay pagos registrados para este edificio.</div><% } %>
 </section>
 
+</div>
 <%- include("../partials/footer", { pageScripts: ["auto-submit","tabs"] }) %>

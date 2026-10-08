@@ -1,6 +1,6 @@
 <%- include("../partials/header", { title: "Deudas por ocupante | VecinosApp", pageClass: "occupant-debts-page", pageStyles: ["charts","occupant-debts"] }) %>
 <section class="page-head"><h1>Deudas pendientes por ocupante</h1><a class="debt-report-actions" href="/reports">Volver al resumen</a></section>
-<form class="receipt-filters debt-report-actions" method="get" action="/reports/occupant-debts">
+<form class="receipt-filters debt-report-actions" method="get" data-partial-filter action="/reports/occupant-debts">
   <div class="debt-occupant-picker">
     <label for="debtOccupantSearch">Ocupante</label>
     <% const occupantLabel = (row) => `${row.full_name} · ${row.building_name || "Sin edificio"} · Piso ${row.floor} · Unidad ${row.unit}${row.is_active ? "" : " (inactivo)"}`; %>
@@ -15,6 +15,7 @@
   </div>
   <div class="receipt-filters-actions"><button class="button" type="submit">Ver deudas</button></div>
 </form>
+<div data-partial-results>
 <% if (occupant) { %>
   <section aria-label="Reporte del ocupante" data-occupant-report>
     <div class="page-head">
@@ -42,8 +43,8 @@
     </div>
     <div class="tab-panel" id="occupant-evolution-panel" role="tabpanel" aria-labelledby="occupant-evolution-tab" tabindex="0" hidden>
       <h2>Evolución del gasto en servicios</h2>
-      <p>Últimos seis meses · Monto asignado al ocupante, haya pagado o no. Cada columna muestra el total del período en soles, desglosado por servicio.</p>
-      <p class="field-help">Incluye cuotas fijas y servicios medidos. Se usa el período del recibo; si no identifica un mes, se usa su fecha de emisión. Los meses sin cargos se muestran en cero.</p>
+      <p>Seis meses hasta su última asignación reciente · Monto asignado al ocupante, haya pagado o no. Cada columna muestra el total del período en soles, desglosado por servicio.</p>
+      <p class="field-help">Incluye cuotas fijas y servicios medidos. Se usa el período del recibo; si no identifica un mes, se usa su fecha de emisión. El intervalo termina en el último mes con asignaciones dentro de los seis meses recientes. Los meses sin cargos dentro del intervalo se muestran en cero.</p>
       <% if (evolutionCharts.length) { %>
         <section class="consumption-chart-panel">
           <div class="consumption-chart-heading"><div><h3>Gasto mensual en soles (S/)</h3><span><%= evolutionCharts.map((report) => report.label).join(" · ") %></span></div></div>
@@ -61,8 +62,8 @@
       <% } %>
     </div>
   </section>
-  <script src="/js/consumption-chart.js?v=<%= assetVersion %>" defer></script>
 <% } else { %>
   <p class="detail"><%= occupants.length ? "Selecciona un ocupante para consultar todos sus recibos pendientes." : "No hay ocupantes disponibles." %></p>
 <% } %>
-<%- include("../partials/footer", { pageScripts: ["tabs","occupant-debts"] }) %>
+</div>
+<%- include("../partials/footer", { pageScripts: ["consumption-chart","tabs","occupant-debts"] }) %>
