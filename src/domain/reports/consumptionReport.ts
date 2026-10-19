@@ -69,14 +69,17 @@ export function buildConsumptionCharts(rows, selectedFrom, selectedTo) {
       group = { service, label: serviceLabels[service] || service, unit: row.consumption_unit || serviceUnits[service] || "unid.", values: new Map() };
       consumptionByService.set(service, group);
     }
-    group.values.set(row.month, Number(row.consumption_milli || 0) / 1000);
+    group.values.set(row.month, {
+      value: Number(row.consumption_milli || 0) / 1000,
+      cost: Number(row.total_amount_cents || 0) / 100
+    });
   });
   return [...consumptionByService.values()].map((group) => {
     return {
       service: group.service,
       label: group.label,
       unit: group.unit,
-      data: months.map((month) => ({ category: monthLabel(month), value: group.values.get(month) || 0 }))
+      data: months.map((month) => ({ category: monthLabel(month), ...(group.values.get(month) || { value: 0, cost: 0 }) }))
     };
   });
 }

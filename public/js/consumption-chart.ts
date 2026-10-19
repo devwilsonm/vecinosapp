@@ -40,7 +40,7 @@ function initializeCharts() {
       addChartCursor(chart, root);
       const xAxis = addCategoryAxis(chart, root, theme);
       const yAxis = addValueAxis(chart, root, theme);
-      const tooltip = createChartTooltip(root, `{categoryX}: {valueY} ${report.unit}`, theme);
+      const tooltip = createChartTooltip(root, `{categoryX}: {valueY} ${report.unit}${report.service === "luz" ? "\nCosto total: S/ {cost.formatNumber('#,###.00')}" : ""}`, theme);
       const series = addColumnSeries(chart, root, {
         name: report.label,
         xAxis,
@@ -103,9 +103,9 @@ function initializeCharts() {
         legend.labels.template.setAll({ fill: theme.textColor, fontSize: 13 });
         legend.valueLabels.template.set("forceHidden", true);
         reports.forEach((report, index) => {
-          let colorValue = Object.hasOwn(servicePalettes, report.service) ? servicePalettes[report.service][0] : defaultChartPalette[serviceIndex % defaultChartPalette.length];
+          let colorValue = Object.hasOwn(servicePalettes, report.service) ? servicePalettes[report.service][report.service === "luz" ? 10 : 0] : defaultChartPalette[serviceIndex % defaultChartPalette.length];
           if (print || document.documentElement.dataset.theme !== "dark") {
-            const lightColors = { agua: 0x0284c7, luz: servicePalettes.luz[0], internet: 0x15803d, otro: 0x64748b };
+            const lightColors = { agua: 0x0284c7, luz: servicePalettes.luz[10], internet: 0x15803d, otro: 0x64748b };
             colorValue = Object.hasOwn(lightColors, report.service) ? lightColors[report.service] : [0x0e7490, 0x1d4ed8, 0x6d28d9, 0xa21caf, 0xbe185d, 0xc2410c][serviceIndex % 6];
           }
           serviceIndex += 1;

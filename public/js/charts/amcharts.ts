@@ -29,6 +29,7 @@ export function getChartTheme() {
 
 export function createChartRoot(elementId) {
   const root = am5.Root.new(elementId);
+  root._logo?.dispose();
   root.setThemes([am5themes_Animated.new(root)]);
   return root;
 }

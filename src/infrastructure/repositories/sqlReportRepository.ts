@@ -90,7 +90,8 @@ export class SqlReportRepository implements ReportRepository {
     return this.database.prepare(`
       SELECT r.service_type, MAX(r.consumption_unit) AS consumption_unit,
         SUBSTR(r.issue_date, 1, 7) AS month,
-        SUM(r.consumption_total_milli) AS consumption_milli
+        SUM(r.consumption_total_milli) AS consumption_milli,
+        SUM(r.total_amount_cents) AS total_amount_cents
       FROM receipts r
       WHERE r.issue_date >= ? AND r.issue_date < ?${serviceFilter}${buildingFilter}${access.sql}
       GROUP BY r.service_type, SUBSTR(r.issue_date, 1, 7)
